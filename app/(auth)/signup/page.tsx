@@ -1,0 +1,27 @@
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import { SignUpForm } from '../_components/sign-up-form';
+
+export const metadata: Metadata = { title: 'Create your account' };
+
+export default function SignUpPage() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+        <p className="text-foreground-muted text-sm">
+          Start turning your business idea into a plan.
+        </p>
+      </div>
+
+      <SignUpForm />
+
+      <p className="text-foreground-muted text-sm">
+        Already have an account?{' '}
+        <Link href="/login" className="text-brand underline underline-offset-4">
+          Sign in
+        </Link>
+      </p>
+    </div>
+  );
+}

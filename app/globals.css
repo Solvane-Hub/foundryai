@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+
+/*
+ * FoundryAI design tokens.
+ *
+ * PHASE 0 PLACEHOLDER — these are neutral, accessible defaults chosen only so the
+ * build is green. The real palette is a Phase 2 (Design System) deliverable and is
+ * BLOCKED on brand tokens from the founder (open question Q8).
+ *
+ * Every colour below is expressed as a token. Swapping the brand palette is a
+ * change to this block only — no component should ever hard-code a colour.
+ */
+@theme {
+  --color-surface: oklch(100% 0 0);
+  --color-surface-muted: oklch(97% 0.005 260);
+  --color-border: oklch(92% 0.008 260);
+  --color-foreground: oklch(21% 0.02 260);
+  --color-foreground-muted: oklch(50% 0.015 260);
+  --color-brand: oklch(52% 0.16 250);
+  --color-brand-foreground: oklch(100% 0 0);
+
+  /* Trust Layer palette — Trust Layer & Evidence Framework v1.0.
+     Defined as tokens now so Phase 7 cannot drift from the spec. */
+  --color-trust-verified: oklch(58% 0.15 150);
+  --color-trust-derived: oklch(72% 0.15 85);
+  --color-trust-recommended: oklch(58% 0.14 250);
+  --color-trust-unknown: oklch(65% 0.01 260);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-foreground);
+  }
+  /* Accessibility is a core requirement, not an enhancement (Frontend Architecture). */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

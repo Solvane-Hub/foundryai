@@ -1,0 +1,78 @@
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
+
+export type Db = SupabaseClient<Database>;
+
+/**
+ * RLS tests run against a REAL Supabase project with REAL authenticated sessions.
+ * Mocking here would test the mock, not the security boundary.
+ */
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const aEmail = process.env.RLS_TEST_USER_A_EMAIL;
+const aPassword = process.env.RLS_TEST_USER_A_PASSWORD;
+const bEmail = process.env.RLS_TEST_USER_B_EMAIL;
+const bPassword = process.env.RLS_TEST_USER_B_PASSWORD;
+
+export const rlsConfigured = Boolean(url && anonKey && aEmail && aPassword && bEmail && bPassword);
+
+/**
+ * Skipping a security suite silently is how isolation regressions ship.
+ * CI sets RLS_TESTS_REQUIRED=1, which turns "not configured" into a failure.
+ */
+export const rlsRequired = process.env.RLS_TESTS_REQUIRED === '1';
+
+let seq = 0;
+
+function client(): Db {
+  // Distinct storage keys: several clients coexist in one process, and sharing a
+  // key makes GoTrue sessions clobber each other — which would silently invalidate
+  // the isolation these tests exist to prove.
+  seq += 1;
+  return createClient<Database>(url!, anonKey!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: `foundryai-rls-test-${seq}`,
+    },
+  });
+}
+
+/** An unauthenticated client — used to prove `anon` can reach nothing. */
+export function anonClient(): Db {
+  return client();
+}
+
+export async function signIn(which: 'A' | 'B'): Promise<{ db: Db; userId: string }> {
+  const db = client();
+  const email = which === 'A' ? aEmail! : bEmail!;
+  const password = which === 'A' ? aPassword! : bPassword!;
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(`Could not sign in test user ${which}: ${error.message}`);
+  if (!data.user) throw new Error(`No user returned for test user ${which}`);
+  return { db, userId: data.user.id };
+}
+
+/**
+ * Businesses cannot be deleted — there is no DELETE policy, by design (ADR-0009).
+ * Tests therefore clean up the only way the application can: by archiving.
+ * The partial unique index on active names means archiving frees the name for reuse,
+ * which is what makes this suite re-runnable.
+ */
+export async function archiveAll(db: Db, ownerId: string, namePrefix: string): Promise<void> {
+  const { data } = await db
+    .from('businesses')
+    .select('id')
+    .eq('owner_id', ownerId)
+    .like('name', `${namePrefix}%`)
+    .neq('status', 'archived');
+  for (const row of data ?? []) {
+    await db
+      .from('businesses')
+      .update({ status: 'archived', archived_at: new Date().toISOString() })
+      .eq('id', row.id);
+  }
+}
+
+export const RUN = `rlstest-${Date.now()}`;

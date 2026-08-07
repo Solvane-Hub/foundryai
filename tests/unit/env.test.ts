@@ -32,6 +32,36 @@ describe('environment validation', () => {
     );
   });
 
+  it('rejects a Supabase URL that includes a path — the /rest/v1/ misconfiguration', () => {
+    // Regression: a URL ending in /rest/v1/ produced /rest/v1//rest/v1/... and
+    // 404'd every query, against a database where the tables plainly existed.
+    expect(() =>
+      parseClientEnv({
+        ...validClient,
+        NEXT_PUBLIC_SUPABASE_URL: 'https://abc.supabase.co/rest/v1/',
+      }),
+    ).toThrow(/origin only/i);
+  });
+
+  it('rejects a Supabase URL with any path segment', () => {
+    expect(() =>
+      parseClientEnv({ ...validClient, NEXT_PUBLIC_SUPABASE_URL: 'https://abc.supabase.co/auth' }),
+    ).toThrow(/origin only/i);
+  });
+
+  it('strips a trailing slash from the Supabase URL', () => {
+    const env = parseClientEnv({
+      ...validClient,
+      NEXT_PUBLIC_SUPABASE_URL: 'https://abc.supabase.co/',
+    });
+    expect(env.NEXT_PUBLIC_SUPABASE_URL).toBe('https://abc.supabase.co');
+  });
+
+  it('strips a trailing slash from the app URL', () => {
+    const env = parseClientEnv({ ...validClient, NEXT_PUBLIC_APP_URL: 'https://app.example.com/' });
+    expect(env.NEXT_PUBLIC_APP_URL).toBe('https://app.example.com');
+  });
+
   it('treats the service role key as optional but typed', () => {
     expect(parseServerEnv({ NODE_ENV: 'test' }).NODE_ENV).toBe('test');
   });

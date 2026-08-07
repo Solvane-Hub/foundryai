@@ -15,10 +15,45 @@ const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 });
 
+/**
+ * The Supabase URL must be an ORIGIN ONLY — no path, no trailing slash.
+ *
+ * The client appends `/rest/v1/...` itself, so a value like
+ * `https://xyz.supabase.co/rest/v1/` produces `/rest/v1//rest/v1/...` and every
+ * request 404s. `z.url()` alone accepts that happily, and the failure surfaces
+ * far from its cause — as "table not found" on every query, against a database
+ * where the table plainly exists.
+ *
+ * Caught in verification on 2026-08-07; now rejected at boot.
+ */
+function isOriginOnly(value: string): boolean {
+  // Must not throw: Zod 4 still runs refinements after an earlier check fails,
+  // so this receives malformed input. An unguarded `new URL()` would escape
+  // safeParse as a raw TypeError instead of becoming a validation issue.
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  return (url.pathname === '' || url.pathname === '/') && !url.search && !url.hash;
+}
+
+const supabaseUrlSchema = z
+  .url()
+  .refine(
+    isOriginOnly,
+    'Must be the project origin only, with no path — e.g. https://your-project.supabase.co (not .../rest/v1/).',
+  )
+  .transform((v) => v.replace(/\/+$/, ''));
+
 const clientSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.url(),
+  NEXT_PUBLIC_SUPABASE_URL: supabaseUrlSchema,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  NEXT_PUBLIC_APP_URL: z.url().default('http://localhost:3000'),
+  NEXT_PUBLIC_APP_URL: z
+    .url()
+    .default('http://localhost:3000')
+    .transform((v) => v.replace(/\/+$/, '')),
 });
 
 /** The shape of an environment source. Narrower than NodeJS.ProcessEnv so the

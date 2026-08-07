@@ -58,7 +58,7 @@ join disappear.
    across rows with differing arguments. Rejected — it obscures the cost without removing it.
 
 3. **Materialized view or cached ownership table.**
-   Introduces replication lag into a *security* boundary. A stale ownership row is a
+   Introduces replication lag into a _security_ boundary. A stale ownership row is a
    cross-tenant read. Rejected on principle: correctness of isolation must never depend on
    refresh timing.
 
@@ -80,12 +80,12 @@ using (app.business_access(business_id))
 
 Known affected tables (all Phase 3+; none in Sprint 1):
 
-| Table | Natural parent | Carries `business_id` | Hops saved |
-|---|---|---|---|
-| `tasks` | `launch_plans` | ✅ | 1 |
-| `conversation_messages` | `conversations` | ✅ | 1 |
-| `agent_executions` | `workflow_runs` | ✅ | 1 |
-| `knowledge_chunks` | `knowledge_documents` | ❌ **not business-owned** | n/a |
+| Table                   | Natural parent        | Carries `business_id`     | Hops saved |
+| ----------------------- | --------------------- | ------------------------- | ---------- |
+| `tasks`                 | `launch_plans`        | ✅                        | 1          |
+| `conversation_messages` | `conversations`       | ✅                        | 1          |
+| `agent_executions`      | `workflow_runs`       | ✅                        | 1          |
+| `knowledge_chunks`      | `knowledge_documents` | ❌ **not business-owned** | n/a        |
 
 `business_profiles`, `launch_plans`, `compliance_requirements`, `funding_opportunities`,
 `workflow_runs`, `conversations` and `documents` are direct children — their `business_id` is
@@ -135,9 +135,9 @@ Mechanism 3 applies unconditionally.
 - A documented, bounded exception to a documented principle.
 
 **Documentation update required.** Database Architecture § Normalized should note the
-exception: *"`business_id` may be carried on any business-owned table regardless of depth, to
+exception: _"`business_id` may be carried on any business-owned table regardless of depth, to
 keep Row Level Security predicates to a single indexed lookup. See ADR-0011. No other
-denormalization is permitted without a new ADR."*
+denormalization is permitted without a new ADR."_
 
 ## References
 

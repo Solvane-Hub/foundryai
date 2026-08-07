@@ -8,6 +8,112 @@ This project is pre-release; versions are sprint-scoped until first deployment.
 
 ## [Unreleased] — Sprint 1 (Platform Foundation)
 
+### Phase 6 — Founder Intake · 2026-08-07
+
+**Added**
+
+- Five-step intake wizard (business description, stage and location, team, funding, goals)
+  with per-step validation and a progress indicator.
+- **Draft persistence on every step.** Each submit writes immediately, so closing the browser
+  mid-flow loses nothing (acceptance criteria C3/C4). Resumability is a data property, not UI
+  polish.
+- Resume logic that refuses to jump ahead of what has been answered — a later step would have
+  nothing to resume from. Junk step parameters clamp into range.
+- Review screen with per-answer edit links, and intake completion advancing the business to
+  `intake_complete` through the ADR-0007 state machine.
+- Dashboard now shows real intake progress and the correct next action.
+- 30 new unit tests (94 total).
+
+**Fixed**
+
+- `tests/unit/business-lifecycle.test.ts` asserted on `Error.message`, which is deliberately
+  the _developer_ message. Audited every founder-facing path first: `fail()` serializes only
+  `humanMessage`, the UI renders the `Result`'s message, and `assertTransition` reaches users
+  solely via `archiveBusinessAction` → `flatten` → `fail`. The implementation was correct, so
+  the test was strengthened rather than relaxed — it now asserts the founder-safe message,
+  that developer context is preserved internally, and that **nothing technical survives
+  serialization to the client**.
+
+**Design notes**
+
+- Funding amount is genuinely optional. Forcing a number would fabricate data the Funding
+  Agent would later treat as real; "I don't know" must be representable.
+- Funding currency is derived in the service from the business's country, never typed by the
+  founder, so it cannot disagree with the `bp_funding_currency_required_with_amount`
+  constraint.
+- ⚠️ `business_stage` values are still undefined in canonical documentation (open question
+  Q-S2). The five values used are generic business language, not a regulatory
+  classification, and are stored as free text so they can change without a migration. **They
+  must be confirmed before the Coordinator Agent consumes them**, or the agent contract will
+  drift.
+
+**Verified live** (as an authenticated founder, under RLS)
+
+```
+create business            -> status=draft
+create intake profile      -> last_completed_step=0
+save step 1                -> 200  (draft persisted)
+amount without currency    -> 400  (constraint correctly rejects)
+amount + derived currency  -> 204
+advance to intake_complete -> 204
+duplicate intake profile   -> 409  (1:1 enforced)
+archive                    -> 204
+hard DELETE attempt        -> 403  (no DELETE policy exists)
+```
+
+- The layer-boundary lint caught three `app/ → lib/db` violations during this phase. All were
+  fixed by exposing reads through `services/` and centralizing types, never by relaxing the rule.
+
+### Phases 4 & 5 — Application Shell and Business Creation · 2026-08-07
+
+**Added**
+
+- **Application shell**: sticky header with business selector and user menu, sidebar
+  navigation, responsive mobile nav, skip-to-content link, per-segment loading skeleton and
+  error boundary.
+- Navigation lists not-yet-built routes as visibly disabled rather than hiding them or
+  linking to dead ends — the founder can see where the product is going without being misled.
+- **Business creation**: `services/business` with the ADR-0007 lifecycle state machine,
+  `lib/db/businesses` repository, Zod contracts, and Server Actions for create, rename,
+  archive and select.
+- Business selector backed by an httpOnly cookie. The cookie is a _hint, not an
+  authorization token_: every read re-checks it against the RLS-scoped list, so a foreign or
+  stale ID silently falls back rather than selecting another tenant's business.
+- Settings page (account details, business rename), and placeholder routes for intake,
+  timeline, compliance, funding, documents and Nova.
+- `components/ui`: Card, EmptyState, Select, Badge. `EmptyState` requires an explanation and
+  a next step — "No data" is not expressible through it.
+- `types/business.ts` — centralized domain types so `app/` and `components/` can name a
+  business without importing the data-access layer.
+- 21 new unit tests (64 total) covering lifecycle transitions, cookie resolution and
+  business validation.
+
+**Fixed**
+
+- `lib/env.ts` threw a raw `TypeError` ("Invalid URL") instead of a validation error on a
+  malformed Supabase URL. Zod 4 runs refinements even after an earlier check fails, so the
+  unguarded `new URL()` escaped `safeParse`. Now guarded; the reported test failure is
+  resolved and four regression tests cover it.
+- Corrected `NEXT_PUBLIC_SUPABASE_URL`, which carried a `/rest/v1/` suffix and caused every
+  Supabase request to 404 against tables that exist. Validation now rejects any path at boot.
+
+**Security**
+
+- Layer-boundary lint caught `app/` importing a type from `lib/db` during this phase; fixed
+  by centralizing the type rather than relaxing the rule.
+- Business status transitions are enforced in the services layer. The database enum
+  constrains the vocabulary; only this state machine prevents a business skipping intake.
+- Audit events recorded for `business.created`, `business.updated`, `business.archived`.
+  Verified functional end-to-end: `audit_log` write returned 201, anon read still 401, and
+  the append-only trigger still rejects `service_role` UPDATE with 403.
+
+**Known gaps**
+
+- `next build` and Vitest **cannot run over the mounted filesystem** — both crash with
+  `Bus error (core dumped)` (SIGBUS from memory-mapped I/O on a network mount) or hang.
+  Typecheck and lint pass; the full gate must be run locally on Windows.
+- Playwright still cannot run in the agent environment.
+
 ### Phase 3 — Authentication · 2026-08-05
 
 **Added**

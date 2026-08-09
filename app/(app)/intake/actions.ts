@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { AppError, fail, newCorrelationId, ok, type Result } from '@/lib/errors';
 import { toFieldErrors } from '@/lib/validation/field-errors';
+import { logger } from '@/lib/logger';
 import {
   stepDescriptionSchema,
   stepFundingSchema,
@@ -31,7 +32,10 @@ async function ctxOf(): Promise<RequestContext> {
 
 function flatten(error: unknown, ctx: RequestContext): Result<never> {
   if (error instanceof AppError) return fail(error);
-  console.error(`[intake] unexpected correlationId=${ctx.correlationId}`, error);
+  logger.error('intake.unexpected', {
+    correlationId: ctx.correlationId,
+    code: error instanceof Error ? error.name : 'unknown',
+  });
   return fail(
     new AppError({
       code: 'UNEXPECTED',

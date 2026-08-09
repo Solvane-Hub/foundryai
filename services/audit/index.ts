@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { insertAuditEntry, type AuditEntry } from '@/lib/db/audit';
+import { logger } from '@/lib/logger';
 
 /**
  * Audit service.
@@ -17,16 +18,22 @@ export async function recordAuditEvent(entry: AuditEntry): Promise<void> {
   const admin = createAdminClient();
 
   if (!admin) {
-    console.error(
-      `[audit] NOT RECORDED — SUPABASE_SERVICE_ROLE_KEY is not configured. event=${entry.event} correlationId=${entry.correlationId ?? 'none'}`,
-    );
+    logger.error('audit.not_recorded', {
+      reason: 'SUPABASE_SERVICE_ROLE_KEY is not configured',
+      event: entry.event,
+      correlationId: entry.correlationId ?? undefined,
+      businessId: entry.businessId ?? undefined,
+    });
     return;
   }
 
   const { error } = await insertAuditEntry(admin, entry);
   if (error) {
-    console.error(
-      `[audit] WRITE FAILED event=${entry.event} correlationId=${entry.correlationId ?? 'none'} error=${error}`,
-    );
+    logger.error('audit.write_failed', {
+      event: entry.event,
+      correlationId: entry.correlationId ?? undefined,
+      businessId: entry.businessId ?? undefined,
+      code: error,
+    });
   }
 }

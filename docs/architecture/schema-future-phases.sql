@@ -60,9 +60,14 @@ create type public.trust_level as enum (
 --   trust_score      smallint    0–100
 --   citations        jsonb       array of citation objects (see below)
 --
--- Citation object shape — Trust Layer § Citation Requirements requires ALL of:
---   { "agency", "document", "section", "publication_date",
---     "knowledge_version", "url", "last_reviewed_date" }
+-- Citation object shape — see the CANONICAL definition in
+-- docs/architecture/trust-layer-specification.md §8. Do not restate it here.
+--   MANDATORY: chunk_id (retrieval identity), agency, document, section,
+--              publication_date, last_reviewed_date, knowledge_version,
+--              url, accessed_at
+--   OPTIONAL:  clause, page
+-- chunk_id binds a claim to the exact chunk returned by the current retrieval
+-- run; without it, citation binding and grounding cannot be reproduced.
 
 
 -- ============================================================================

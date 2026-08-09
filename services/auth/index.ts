@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 import { AppError, newCorrelationId } from '@/lib/errors';
 import { recordAuditEvent } from '@/services/audit';
+import { logger } from '@/lib/logger';
 import type {
   RequestPasswordResetInput,
   ResetPasswordInput,
@@ -177,7 +178,7 @@ export async function requestPasswordReset(
   if (error) {
     const translated = translateAuthError(error.message, correlationId);
     if (translated.code === 'AUTH_RATE_LIMITED') throw translated;
-    console.error(`[auth] password reset failed correlationId=${correlationId} ${error.message}`);
+    logger.error('auth.password_reset_failed', { correlationId, code: translated.code });
   }
 
   await recordAuditEvent({

@@ -79,6 +79,31 @@ jobs:
       - run: npm ci
       - run: npm run test:rls
 
+  a11y:
+    name: Accessibility (WCAG 2.1 AA)
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      RLS_TEST_USER_A_EMAIL: ${{ secrets.RLS_TEST_USER_A_EMAIL }}
+      RLS_TEST_USER_A_PASSWORD: ${{ secrets.RLS_TEST_USER_A_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:a11y
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: a11y-report
+          path: playwright-report/
+          retention-days: 7
+
   security:
     name: Dependency audit
     runs-on: ubuntu-latest

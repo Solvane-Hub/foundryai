@@ -6,12 +6,15 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { AppError, fail, newCorrelationId, ok, type Result } from '@/lib/errors';
 import { toFieldErrors } from '@/lib/validation/field-errors';
+import { logger } from '@/lib/logger';
 import {
   archiveBusinessSchema,
   createBusinessSchema,
   updateBusinessSchema,
 } from '@/lib/validation/business';
 import * as businessService from '@/services/business';
+import * as profileService from '@/services/profile';
+import { updateProfileSchema } from '@/lib/validation/profile';
 import { getCurrentUser, type RequestContext } from '@/services/auth';
 import { CURRENT_BUSINESS_COOKIE } from '@/lib/business-cookie';
 
@@ -26,7 +29,10 @@ async function requestContext(): Promise<RequestContext> {
 
 function flatten(error: unknown, ctx: RequestContext): Result<never> {
   if (error instanceof AppError) return fail(error);
-  console.error(`[business] unexpected correlationId=${ctx.correlationId}`, error);
+  logger.error('business.unexpected', {
+    correlationId: ctx.correlationId,
+    code: error instanceof Error ? error.name : 'unknown',
+  });
   return fail(
     new AppError({
       code: 'UNEXPECTED',
@@ -183,4 +189,39 @@ export async function selectBusinessAction(formData: FormData): Promise<void> {
   }
   revalidatePath('/', 'layout');
   redirect('/dashboard');
+}
+
+export async function updateProfileAction(
+  _prev: Result<{ saved: true }> | null,
+  formData: FormData,
+): Promise<Result<{ saved: true }>> {
+  const ctx = await requestContext();
+  const parsed = updateProfileSchema.safeParse({ fullName: formData.get('fullName') });
+
+  if (!parsed.success) {
+    return fail(
+      new AppError({
+        code: 'VALIDATION_FAILED',
+        humanMessage: 'Please correct the highlighted fields.',
+        correlationId: ctx.correlationId,
+      }),
+      toFieldErrors(parsed.error.issues),
+    );
+  }
+
+  try {
+    const db = await createClient();
+    const user = await getCurrentUser(db);
+    if (!user) {
+      throw new AppError({
+        code: 'AUTH_SESSION_EXPIRED',
+        humanMessage: 'Your session expired. Please sign in again.',
+      });
+    }
+    await profileService.updateAccountProfile(db, user.id, parsed.data, ctx.correlationId);
+    revalidatePath('/', 'layout');
+    return ok({ saved: true });
+  } catch (error) {
+    return flatten(error, ctx);
+  }
 }

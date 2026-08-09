@@ -2,12 +2,13 @@
   "name": "foundryai",
   "version": "0.1.0",
   "private": true,
-  "description": "FoundryAI \u2014 an AI-native operating system for entrepreneurship. Solvane Hub.",
+  "description": "FoundryAI — an AI-native operating system for entrepreneurship. Solvane Hub.",
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
     "build": "next build",
+    "db:seed": "supabase db execute --file supabase/seed.sql",
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID --schema public > types/database.ts && prettier --write types/database.ts",
     "dev": "next dev",
     "format": "prettier --write .",
@@ -16,6 +17,7 @@
     "lint:fix": "eslint . --fix",
     "start": "next start",
     "test": "vitest run tests/unit tests/integration",
+    "test:a11y": "playwright test tests/e2e/accessibility.spec.ts",
     "test:e2e": "playwright test",
     "test:integration": "vitest run tests/integration",
     "test:rls": "vitest run tests/rls",
@@ -37,6 +39,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/jest-dom": "7.0.0",

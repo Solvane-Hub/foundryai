@@ -43,8 +43,148 @@ app/ → services/ → lib/db/ → Supabase
    architecture changes. 5. Build in small increments. 6. Test. 7. Summarize and
    recommend the next step.
 
+## Architecture documents
+
+`docs/architecture/DOCUMENT_MANIFEST.md` is the register of every architecture
+document — status, version, Notion URL, local path, Drive location, owner,
+related documents, ADRs, evidence. **A document not in the manifest is not
+canonical.** Read the manifest before assuming a document does or does not exist.
+
+Decisions live in `docs/decisions/` as ADR-0001 … ADR-0019 and are binding.
+
+## Trust model (Trust Layer Specification v1.0)
+
+**Four independent dimensions** (ADR-0015, ratified 2026-08-07). Do not conflate
+them and do not introduce a fifth:
+
+| Dimension                | Scale        | Property of                                                     |
+| ------------------------ | ------------ | --------------------------------------------------------------- |
+| **Source Authority**     | 1–5          | a _document_ — Research Agent Spec scale is canonical           |
+| **Evidence Strength**    | 1–5          | a _passage↔claim link_ — "does this passage actually say this?" |
+| **Reasoning Confidence** | HIGH/MED/LOW | an _inference_ — how far we travelled from evidence             |
+| **Coverage Confidence**  | HIGH/MED/LOW | a _set_ — guards against omission                               |
+
+**Trust Level** (🟢 verified · 🟡 derived · 🔵 recommended · ⚪ unknown) and
+**Trust Score (0–100)** are **derived** from those four. Never agent-assigned —
+a component that both produces and validates a claim provides no assurance.
+
+Hard rules:
+
+- 🟢 **VERIFIED requires Source Authority ≥ 4** — legislation/regulations only.
+  Official guidance (3) can be 🟡 DERIVED at most.
+- Evidence Strength ≤ 2 and Reasoning LOW can never be verified or derived.
+- Score `< 50` is quarantined; `unknown` is exempt and always shown.
+- **Coverage Confidence is computed and stored but NOT displayed in v1.**
+  Therefore copy must say _"Requirements we found"_, never _"Your complete
+  requirements"_ (Constitution Article VII).
+
+Trust validation **fails closed** — unvalidated guidance is worse than none.
+This is deliberately the opposite of audit logging, which fails open (ADR-0012).
+
+## AI workflow execution (ADR-0016)
+
+**A workflow is a state machine in PostgreSQL, not a running process. Each worker
+invocation advances it by exactly one step.**
+
+- Never hold an HTTP request open for a generation run.
+- Every step writes `agent_executions`; `(workflow_run_id, sequence_no)` is unique,
+  so **every step must be idempotent**.
+- Retries are per-step (max 3, exponential backoff). Cancellation is cooperative,
+  checked between steps — never mid-inference.
+- **Partial results are always retained.** A failed run keeps completed steps;
+  never show a founder a blank failure.
+- Agents **plan**; the runner **executes**. The Coordinator emits an Execution
+  Plan and does not call other agents.
+
+## AI subsystem rules (documents 4–15)
+
+- **Agent output contract (ADR-0017).** One envelope. Every claim carries the
+  `chunk_id`s it came from **and a verbatim quote from each**. A chunk not
+  returned by the current run's retrieval is fabrication. `unresolved[]` is
+  **mandatory** — never silently drop what could not be determined.
+- **Every step is idempotent.** Stable `claim_id` from normalised content, no
+  wall-clock dependence. Retries are normal operation.
+- **Evaluation gates every AI change (ADR-0018).** Prompt, model, chunking or
+  retrieval. Hard gates: coverage recall ≥ 95%, citation validity 100%,
+  domain-declaration recall ≥ 99%, fabrication 0.
+- **Prompts are source code.** In Git, semantically versioned, schema-validated,
+  with a mandatory refusal test. Never in a database or vendor console.
+- **Conversation is never evidence.** Structured facts get columns, not chat
+  history. Agent reasoning is never re-fed into a later run.
+- **Provider SDKs only inside `lib/ai/providers/` (ADR-0019).** Agents request a
+  capability tier, never a model name. Failover is off by default.
+- **Never claim completeness.** Copy says "Requirements we found", never "Your
+  complete requirements" — a safety control, not a style preference.
+- **Refusal is a designed output.** A falling refusal rate is an alert, not an
+  improvement.
+
 ## Current position
 
-Sprint 1 (Platform Foundation). **Out of scope: AI, Knowledge, Nova, Funding,
-Compliance.** Do not implement them, and do not add mock data that could be
-mistaken for real guidance.
+Sprint 1 (Platform Foundation) is **complete** — 8 of 9 phases; Phase 2 partial,
+blocked on brand tokens. Working: auth, application shell, business creation,
+founder intake, dashboard, settings, hardening.
+
+AI Architecture documentation series: **15 of 15 complete.** See
+`docs/architecture/DOCUMENT_MANIFEST.md`.
+
+Knowledge Engineering series: **7 of 7 registered and mirrored** into
+`docs/architecture/knowledge-engineering/` (K1–K7, completed 2026-08-08). Notion is
+the **authoring surface**; the repo mirror is what CI and assistants read. Each mirror
+header records its Notion URL — change both in the same session or the mirror lies.
+
+✅ **Conflicts C1–C3 and R1–R3 resolved 2026-08-08** (all founder-approved;
+ADR-0015 unchanged). Key outcomes now binding:
+
+- **Authority is a property of the document, not the publisher.** An Act is
+  Level 5, a regulation Level 4, and the guidance page explaining it Level 3 —
+  even from the same ministry. Level 3 can never reach 🟢 VERIFIED.
+- **One canonical citation object** — Trust Layer §8. `chunk_id` is
+  **mandatory**; it binds a claim to the exact chunk from the current retrieval
+  run. Other documents **reference** it; never restate it.
+- **K6 (Knowledge Monitoring) is the canonical monitoring spec.** AI-6
+  Knowledge Freshness is **retired** — retained for history only, do not
+  implement from it.
+- **"Reasoning Confidence"** is the canonical dimension name, never
+  "Reasoning Quality".
+
+✅ **K2/K3/K5/K7 audit A1–A12 resolved 2026-08-08.** Additional binding rules:
+
+- **Trust is never a chunk property.** A chunk carries **Source Authority only**.
+  Evidence Strength, Reasoning Confidence, Trust Level and Trust Score are
+  derived per claim — a chunk has no claim to be strong evidence _for_.
+- **`chunk_id` is mandatory** on every chunk returned by retrieval, stable within
+  its Knowledge Pack version. It is the **single** citation identity — never add
+  a competing identifier.
+- **Retrieval reports; the Coordinator decides.** Retrieval may report coverage
+  limitations but must never trigger founder clarification itself.
+- **Retrieval is deterministically reproducible.** Same ordered result set for a
+  fixed knowledge version, config, query representation, filters, ranking config
+  and embedding model/version. Persist those inputs or replay is impossible.
+- **Embeddings are retrieval artifacts, not Knowledge Pack versions.**
+  Regenerating them does not increment the Pack version; changing the model
+  rebuilds retrieval artifacts only. Record model, version, **dimensions**,
+  timestamp, source Pack version, config version, chunk version, status.
+- **Legal Source Category** (6 values) is metadata alongside the 5-level Source
+  Authority scale. It orders conflicts _within_ a level. There is no sixth level.
+
+✅ **Four unregistered documents retired 2026-08-08 (founder decisions D1–D5).**
+
+- **Retrieval Engine Spec** 🟡 superseded by K5 + Coordinator · **Knowledge Graph Architecture**
+  ⛔ archived · **FoundryAI Reasoning Model** 🟡 superseded by ADR-0016/0017 + AI-1/2/3/4 ·
+  **Evidence & Citation Architecture** 🟡 superseded in schema by Trust Layer §8 + K4.
+  **Do not implement from any of them**, despite each declaring "Status: Canonical".
+- **Graph-first retrieval was NOT adopted.** The path is **K3 chunks → K5 deterministic
+  filtering → semantic/hybrid retrieval → trust filtering**. The Knowledge Graph is not the
+  system of record; traversal is not a prerequisite for discovering obligations.
+- **24 shadow ADRs retired** (`ADR-RE-*`, `ADR-KG-*`, `ADR-RM-*`, `ADR-EC-*`), none promoted.
+  Binding decisions live only in `docs/decisions/` as ADR-0001 … ADR-0019.
+- **Harvested:** "Why?" evidence panel → **Launch Plan §5A** · taxonomy expansion →
+  **Coordinator §5A** · conditional requirement logic → **K3 §7.1**. Mapping in the manifest.
+
+**Still out of scope until their phases: AI agents, Knowledge, Nova, Funding,
+Compliance.** Do not implement them, and never add mock data that could be
+mistaken for real guidance — including in seeds, placeholders and demos.
+
+**Implementation is blocked on founder decisions:** embedding model (KI1/MP-1),
+gold-standard curation (EV1), data residency (MP-2), reviewer staffing (HR1),
+legal disclaimer and accountability (SF1/SF3), reproducibility vs erasure (VR1).

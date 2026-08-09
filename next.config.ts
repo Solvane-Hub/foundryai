@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   // (.github/workflows/ci.yml). See ADR-0002.
   // Security Architecture: never leak implementation details to the client.
   poweredByHeader: false,
+  images: {
+    // The hero photograph is the heaviest asset on the site. Sources are WebP;
+    // this lets the optimiser serve AVIF to browsers that accept it, which
+    // measured ~30% smaller on the same frame at equal quality.
+    formats: ['image/avif', 'image/webp'],
+  },
 };
 
 export default nextConfig;

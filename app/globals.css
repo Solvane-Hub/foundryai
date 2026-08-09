@@ -110,6 +110,80 @@
   --color-info-subtle: oklch(96.5% 0.02 240);
   --color-info-border: oklch(88% 0.04 240);
 
+  /* ---- Dark surfaces — "deep water" -----------------------------------
+     The marketing hero and closing chapter run dark. This is not a theme and
+     not a dark mode: it is one half of a deliberate light/dark composition,
+     and it exists because the FoundryAI mark is metallic champagne. The mark
+     measures 1.84:1 on the light canvas and 10.02:1 on `ink` — the brand asset
+     itself decided this. Blue-black rather than navy, so it reads as depth
+     rather than as a colour. */
+  --color-ink: oklch(16.5% 0.012 250);
+  --color-ink-raised: oklch(21.5% 0.014 250);
+  --color-ink-line: oklch(30% 0.014 250); /* hairline — decorative */
+  --color-ink-line-strong: oklch(51% 0.014 250); /* control boundary — 3.36:1 */
+
+  --color-on-ink: oklch(96.5% 0.004 85); /* 17.40:1 */
+  --color-on-ink-muted: oklch(73.5% 0.01 250); /* 8.21:1 */
+  /* 60.5%, not 58.5%: the lower value cleared AA on `ink` but measured 4.18:1
+     on `ink-raised`, and the hero's product panel uses both. */
+  --color-on-ink-subtle: oklch(60.5% 0.012 250); /* 4.99:1 ink · 4.53:1 raised */
+
+  /* Interactive accent lifted for dark surfaces. `brand` at 43% is 1.4:1 on
+     ink — unusable. Same hue, same identity, legible where it has to be. */
+  --color-brand-on-ink: oklch(68% 0.115 255); /* 6.69:1 */
+
+  /* ---- Champagne — editorial accent ------------------------------------
+     Sampled from the logo (mean #cab99c). Sand and low sun against deep water:
+     the second half of the Bahamian pairing, ocean being the first.
+     EDITORIAL ONLY — section numbering, rules, the mark, small caps. It is
+     never an interactive colour; `brand` owns buttons, links and focus, and
+     two clickable-looking accents would make neither mean anything. */
+  --color-champagne: oklch(83% 0.055 85); /* 11.39:1 on ink */
+  --color-champagne-dim: oklch(70% 0.055 85); /* 7.20:1 on ink */
+
+  /* ---- Depth surfaces — going further down --------------------------
+     The page descends: the hero is the surface, §02 is below it, §03 is inside
+     the system. Three tones in one family rather than a theme change — the
+     earlier white-canvas §03 read as a different website.
+
+     `abyss` is DARKER than the section around it, so the product window reads
+     as inset into the surface rather than floating on it. That inversion is
+     what stops it looking like a SaaS card with a drop shadow.
+
+     Note: `on-ink-subtle` measures 4.36:1 on marine — just under AA. Use
+     `on-ink-muted` (7.18:1) for small text on this surface. */
+  --color-marine: oklch(23% 0.028 245); /* #111e29 — section body */
+  --color-marine-line: oklch(34% 0.03 245); /* decorative hairline only */
+  --color-abyss: oklch(12% 0.018 248); /* #02060c — inside the window */
+
+  /* Two intermediate steps so §04 can descend marine → abyss across four
+     panels. The steps measure 1.08 / 1.07 / 1.04:1 — deliberately subtle.
+     Luminance differences compress this far down the scale, and widening them
+     costs legibility at the light end without buying much at the dark end. So
+     tone carries atmosphere and the hairline dividers carry structure. */
+  --color-depth-2: oklch(19.5% 0.025 246);
+  --color-depth-3: oklch(15.5% 0.021 247);
+
+  /* ---- Bahama environment ----------------------------------------------
+     Sampled directly from the approved hero photograph (public/hero/
+     banks-desktop.webp) rather than invented. The photograph establishes the
+     palette; the interface contrasts against it. Hex in each comment is the
+     measured value from the source pixels.
+
+     These are ENVIRONMENTAL colours — backgrounds, rules, accents on imagery.
+     They are not interactive colours: `brand` still owns buttons and focus. */
+  --color-bahama-cyan: oklch(67% 0.123 223); /* #0ba5cc shallows */
+  --color-bahama-turquoise: oklch(76% 0.127 203); /* #12c8d5 sandbank water */
+  --color-bahama-cobalt: oklch(50% 0.117 243); /* #0c69a0 channel */
+  --color-bahama-sky: oklch(63.6% 0.132 244); /* #3592d5 sky */
+  --color-bahama-sand: oklch(91.6% 0.016 183); /* #d8e7e4 sand + cay */
+
+  /* Directional scrim for the hero. Deep-ocean blue at the photograph's own
+     cobalt hue, not neutral black — so it reads as the water getting deeper
+     toward the edge rather than as a grey wash laid over a picture.
+     White text on it measures 18.7:1. */
+  --color-hero-scrim: oklch(18% 0.055 245); /* #001328 */
+
   /* ---- Trust Layer palette — PRESERVED EXACTLY -------------------------
      Trust Layer & Evidence Framework v1.0. These four values are specified,
      not designed. Do not adjust them for visual harmony. */
@@ -184,5 +258,102 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+/* ---- Hero motion --------------------------------------------------------
+   Two animations on the whole page, both CSS so the hero stays a Server
+   Component.
+
+   The panel entrance uses fill-mode `both` with no delay: the global
+   reduced-motion rule shortens duration to 0.01ms, so it completes instantly
+   and the panel is visible rather than stuck at its `from` keyframe. A delay
+   would survive that override and leave a blank gap, so there isn't one.
+
+   The scroll cue loops, and a looping animation shortened to 0.01ms would
+   strobe — which is exactly the harm the preference exists to prevent. It is
+   therefore gated behind `no-preference` instead of relying on the override. */
+@keyframes hero-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-panel {
+  animation: hero-panel-in 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes hero-rule-travel {
+    0% {
+      transform: translateX(-100%);
+    }
+    55%,
+    100% {
+      transform: translateX(280%);
+    }
+  }
+
+  .hero-rule {
+    animation: hero-rule-travel 2600ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+}
+
+/* ---- Application components on an ink surface ---------------------------
+   The landing page renders the real `Journey` component inside a dark product
+   window. Rather than fork the component or pass it a `tone` prop, the scope
+   below re-points the design tokens it consumes. Every colour in the system is
+   a CSS variable, so re-declaring them on an ancestor re-themes the subtree —
+   which is the payoff for never hard-coding a colour.
+
+   This is the ONLY place the marketing site re-themes an application
+   component. If a second one appears, that is the signal the component needs a
+   real surface prop instead. */
+.marketing-journey {
+  --color-foreground: var(--color-on-ink);
+  --color-foreground-muted: var(--color-on-ink-muted);
+  --color-foreground-subtle: var(--color-on-ink-subtle);
+  --color-border: var(--color-ink-line);
+  --color-border-strong: var(--color-ink-line-strong);
+  --color-surface: transparent;
+  --color-surface-muted: oklch(100% 0 0 / 0.05);
+
+  /* "Complete" becomes the section's system colour; "current" becomes plain
+     white so the two states stay clearly distinct on a dark ground.
+
+     Deep teal rather than the bright `bahama-turquoise`: the Journey marker
+     paints a white tick on this fill, and white on the bright value measured
+     2.05:1. At 48% lightness the tick reads at 6.00:1 while the disc still
+     shows against ink at 3.21:1 — same water family, both constraints met. */
+  --color-success: oklch(48% 0.105 200);
+  --color-brand: var(--color-on-ink);
+  --color-brand-foreground: var(--color-ink);
+  --color-brand-hover: var(--color-bahama-turquoise);
+}
+
+/* ---- §04 depth panels ----------------------------------------------------
+   Width lives in CSS rather than an inline style because the two layouts are a
+   media-query apart: a vertical accordion on small screens, four horizontal
+   columns from `lg`. An inline width would apply at every breakpoint.
+
+   Three collapsed columns at 6.5rem leave the open one the remainder, so the
+   row always sums to 100% and nothing reflows mid-transition. */
+.depth-panel {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .depth-panel {
+    width: 6.5rem;
+    transition: width 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .depth-panel[data-open='true'] {
+    width: calc(100% - 19.5rem);
   }
 }

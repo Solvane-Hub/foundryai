@@ -1,15 +1,16 @@
-import { EmptyState } from '@/components/ui/empty-state';
+import type { Metadata } from 'next';
+import { NotBuiltYet } from '@/components/ui/not-built-yet';
+import { PageHeader } from '@/components/ui/page-header';
 
-export const metadata = { title: 'Compliance' };
+export const metadata: Metadata = { title: 'Compliance' };
 
 export default function CompliancePage() {
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Compliance</h1>
-      <EmptyState
-        title="Not built yet"
-        explanation="This part of the workspace arrives in a later phase of the roadmap."
-        nextStep="Nothing is shown here because nothing real exists to show yet."
+    <div className="flex max-w-3xl flex-col gap-8">
+      <PageHeader title="Compliance" />
+      <NotBuiltYet
+        feature="Compliance requirements"
+        explanation="The registrations, licences, permits and filings that apply to your business — each one traced back to the legislation it comes from."
       />
     </div>
   );

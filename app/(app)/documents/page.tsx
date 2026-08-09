@@ -1,15 +1,16 @@
-import { EmptyState } from '@/components/ui/empty-state';
+import type { Metadata } from 'next';
+import { NotBuiltYet } from '@/components/ui/not-built-yet';
+import { PageHeader } from '@/components/ui/page-header';
 
-export const metadata = { title: 'Documents' };
+export const metadata: Metadata = { title: 'Documents' };
 
 export default function DocumentsPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
-      <EmptyState
-        title="Not built yet"
-        explanation="This part of the workspace arrives in a later phase of the roadmap."
-        nextStep="Nothing is shown here because nothing real exists to show yet."
+    <div className="flex max-w-3xl flex-col gap-8">
+      <PageHeader title="Documents" />
+      <NotBuiltYet
+        feature="Your documents"
+        explanation="Forms, applications and records for your business, kept alongside the requirement each one satisfies."
       />
     </div>
   );

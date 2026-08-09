@@ -3,43 +3,180 @@
 /*
  * FoundryAI design tokens.
  *
- * PHASE 0 PLACEHOLDER — these are neutral, accessible defaults chosen only so the
- * build is green. The real palette is a Phase 2 (Design System) deliverable and is
- * BLOCKED on brand tokens from the founder (open question Q8).
+ * Every colour, radius, shadow and type step lives here. No component may
+ * hard-code a value — that rule is what makes a palette change a one-file diff.
  *
- * Every colour below is expressed as a token. Swapping the brand palette is a
- * change to this block only — no component should ever hard-code a colour.
+ * Direction: near-black charcoal on warm off-white, one restrained ink accent,
+ * muted semantics. Warmth comes from a small hue shift in the neutrals (~85°),
+ * not from beige: pure greys read clinical, and this product is asking founders
+ * to trust it with something that matters.
  */
 @theme {
-  --color-surface: oklch(100% 0 0);
-  --color-surface-muted: oklch(97% 0.005 260);
-  --color-border: oklch(92% 0.008 260);
-  --color-foreground: oklch(21% 0.02 260);
-  --color-foreground-muted: oklch(50% 0.015 260);
-  --color-brand: oklch(52% 0.16 250);
+  /* ---- Typography ------------------------------------------------------ */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-mono-inter), ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  /* A real scale. Line-heights are generous on body sizes and tight on display
+     sizes — the opposite of Tailwind's defaults, which are tuned for density. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-2xs--letter-spacing: 0.02em;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.4375rem;
+
+  --text-base: 1rem;
+  --text-base--line-height: 1.625rem;
+
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-lg--letter-spacing: -0.006em;
+
+  --text-xl: 1.3125rem;
+  --text-xl--line-height: 1.875rem;
+  --text-xl--letter-spacing: -0.012em;
+
+  --text-2xl: 1.625rem;
+  --text-2xl--line-height: 2.125rem;
+  --text-2xl--letter-spacing: -0.018em;
+
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-3xl--letter-spacing: -0.022em;
+
+  --text-4xl: 2.75rem;
+  --text-4xl--line-height: 3rem;
+  --text-4xl--letter-spacing: -0.028em;
+
+  --text-5xl: 3.5rem;
+  --text-5xl--line-height: 3.75rem;
+  --text-5xl--letter-spacing: -0.032em;
+
+  /* ---- Surfaces and neutrals ------------------------------------------ */
+  --color-canvas: oklch(98.4% 0.0035 85); /* page — warm off-white */
+  --color-surface: oklch(100% 0 0); /* raised panels */
+  --color-surface-muted: oklch(96.6% 0.004 85);
+  --color-surface-sunken: oklch(95% 0.005 85);
+
+  /* Hairline for dividers, card edges and separators. Structural decoration —
+     exempt from SC 1.4.11, which governs the boundary of *controls*. */
+  --color-border: oklch(91.5% 0.005 85);
+  --color-border-strong: oklch(85% 0.006 85);
+
+  /* Control boundary. Inputs sit on a surface only 1.06:1 from the canvas, so
+     the border IS the thing that identifies the field — which puts it under
+     SC 1.4.11 and its 3:1 floor. Measured 3.21:1 on canvas, 3.36:1 on white.
+     Darker than the fashionable hairline, and correct. */
+  --color-border-control: oklch(64% 0.008 85);
+  --color-border-control-hover: oklch(55% 0.008 85);
+
+  --color-foreground: oklch(20.5% 0.008 65); /* near-black charcoal */
+  --color-foreground-muted: oklch(47% 0.008 65);
+  /* 4.80:1 on the canvas. Previously 62%, which measured 3.48:1 — enough for
+     large text only, but this token carries eyebrows, captions, placeholders
+     and footer copy at small sizes, so it has to clear AA for body text. */
+  --color-foreground-subtle: oklch(54% 0.006 65);
+
+  /* ---- Accent ---------------------------------------------------------- */
+  /* One accent, deep enough to carry white text at AA on its own. Deliberately
+     dark and slightly desaturated — the bright blue every SaaS dashboard uses
+     reads as a default rather than a choice. */
+  --color-brand: oklch(43% 0.115 262);
+  --color-brand-hover: oklch(38% 0.115 262);
+  --color-brand-subtle: oklch(96% 0.018 262);
+  --color-brand-border: oklch(88% 0.04 262);
   --color-brand-foreground: oklch(100% 0 0);
 
-  /* Trust Layer palette — Trust Layer & Evidence Framework v1.0.
-     Defined as tokens now so Phase 7 cannot drift from the spec. */
+  /* ---- Semantics ------------------------------------------------------- */
+  /* Muted on purpose. A danger state should read as serious, not alarming. */
+  --color-success: oklch(48% 0.105 155);
+  --color-success-subtle: oklch(96.5% 0.025 155);
+  --color-success-border: oklch(87% 0.05 155);
+
+  /* 54% not 55%: at 55% this measured 4.47:1 on its own tint — a third of a
+     point short of AA, and invisible without checking. */
+  --color-warning: oklch(54% 0.105 70);
+  --color-warning-subtle: oklch(96.5% 0.035 80);
+  --color-warning-border: oklch(87% 0.06 80);
+
+  --color-danger: oklch(48% 0.15 27);
+  --color-danger-subtle: oklch(96.5% 0.02 27);
+  --color-danger-border: oklch(88% 0.045 27);
+
+  --color-info: oklch(47% 0.085 240);
+  --color-info-subtle: oklch(96.5% 0.02 240);
+  --color-info-border: oklch(88% 0.04 240);
+
+  /* ---- Trust Layer palette — PRESERVED EXACTLY -------------------------
+     Trust Layer & Evidence Framework v1.0. These four values are specified,
+     not designed. Do not adjust them for visual harmony. */
   --color-trust-verified: oklch(58% 0.15 150);
   --color-trust-derived: oklch(72% 0.15 85);
   --color-trust-recommended: oklch(58% 0.14 250);
   --color-trust-unknown: oklch(65% 0.01 260);
+
+  /* ---- Radius ---------------------------------------------------------- */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+
+  /* ---- Elevation -------------------------------------------------------
+     Barely-there. Depth here comes from borders and spacing; shadows only
+     separate a surface from the canvas behind it. */
+  --shadow-xs: 0 1px 2px 0 oklch(20% 0.01 65 / 0.04);
+  --shadow-sm: 0 1px 2px 0 oklch(20% 0.01 65 / 0.04), 0 1px 3px 0 oklch(20% 0.01 65 / 0.05);
+  --shadow-md: 0 2px 4px -1px oklch(20% 0.01 65 / 0.05), 0 4px 12px -2px oklch(20% 0.01 65 / 0.06);
+  --shadow-lg: 0 4px 8px -2px oklch(20% 0.01 65 / 0.06), 0 12px 28px -4px oklch(20% 0.01 65 / 0.08);
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
   }
+
   body {
-    background-color: var(--color-surface);
+    background-color: var(--color-canvas);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    /* Contextual alternates and kerning on; Inter's defaults are conservative. */
+    font-feature-settings:
+      'cv05' 1,
+      'cv11' 1,
+      'ss01' 1;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Figures in progress readouts, counts and IDs must not jitter as they change. */
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* Headings inherit tracking from the type scale; this only stops the browser
+     re-introducing its own bold weights at inconsistent sizes. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
   /* Accessibility is a core requirement, not an enhancement (Frontend Architecture). */
   :focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
+    border-radius: var(--radius-xs);
   }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

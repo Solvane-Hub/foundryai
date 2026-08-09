@@ -1,17 +1,30 @@
 import Link from 'next/link';
 
+/**
+ * Auth shell.
+ *
+ * Shares the application's vocabulary — same canvas, same rhythm, same type —
+ * so signing in does not feel like a different product from the one behind it.
+ */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-8 px-6 py-12">
-      <header className="flex flex-col gap-1">
-        <Link href="/" className="text-foreground text-xl font-semibold tracking-tight">
+    <div className="flex min-h-dvh flex-col px-6 py-8 sm:py-12">
+      <header className="mx-auto w-full max-w-sm">
+        <Link
+          href="/"
+          className="text-foreground text-[0.9375rem] font-semibold tracking-[-0.015em]"
+        >
           FoundryAI
         </Link>
-        <p className="text-foreground-muted text-sm">
-          An AI-native operating system for entrepreneurship.
-        </p>
       </header>
-      <main>{children}</main>
+
+      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
+        {children}
+      </main>
+
+      <footer className="text-foreground-subtle mx-auto w-full max-w-sm text-xs">
+        An AI-native operating system for entrepreneurship. From Solvane Hub.
+      </footer>
     </div>
   );
 }

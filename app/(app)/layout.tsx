@@ -36,31 +36,48 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Accessibility: keyboard users should be able to skip the nav. */}
       <a
         href="#main-content"
-        className="bg-brand text-brand-foreground sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:px-3 focus:py-2"
+        className="bg-brand text-brand-foreground sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-md"
       >
         Skip to content
       </a>
 
-      <header className="border-border bg-surface sticky top-0 z-10 flex h-14 items-center gap-3 border-b px-4 md:px-6">
-        <MobileNav />
-        <Link href="/dashboard" className="font-semibold tracking-tight">
-          FoundryAI
-        </Link>
-        {current ? (
-          <div className="ml-2 hidden sm:block">
-            <BusinessSelector businesses={businesses} currentId={current.id} />
+      {/* Header sits on the canvas with a hairline rule rather than its own
+          surface — one less horizontal band competing with the page title. */}
+      <header className="border-border bg-canvas/85 sticky top-0 z-30 h-14 border-b backdrop-blur-sm">
+        <div className="mx-auto flex h-full max-w-[88rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
+          <MobileNav />
+
+          <Link
+            href="/dashboard"
+            className="text-foreground shrink-0 text-[0.9375rem] font-semibold tracking-[-0.015em]"
+          >
+            FoundryAI
+          </Link>
+
+          {current ? (
+            <>
+              <span aria-hidden="true" className="bg-border hidden h-4 w-px sm:block" />
+              <div className="hidden min-w-0 sm:block">
+                <BusinessSelector businesses={businesses} currentId={current.id} />
+              </div>
+            </>
+          ) : null}
+
+          <div className="ml-auto">
+            <UserMenu email={user.email ?? null} fullName={profile?.full_name ?? null} />
           </div>
-        ) : null}
-        <div className="ml-auto">
-          <UserMenu email={user.email ?? null} fullName={profile?.full_name ?? null} />
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-6xl gap-8 px-4 py-8 md:px-6">
-        <aside className="hidden w-56 shrink-0 md:block">
-          <SidebarNav />
+      <div className="mx-auto flex w-full max-w-[88rem] gap-10 px-4 py-8 sm:px-6 lg:gap-14 lg:px-8 lg:py-12">
+        {/* Sticky so the nav stays put on long pages without a second scrollbar. */}
+        <aside className="hidden w-52 shrink-0 md:block lg:w-56">
+          <div className="sticky top-[4.5rem]">
+            <SidebarNav />
+          </div>
         </aside>
-        <main id="main-content" className="min-w-0 flex-1">
+
+        <main id="main-content" className="min-w-0 flex-1 pb-16">
           {children}
         </main>
       </div>

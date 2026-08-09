@@ -13,25 +13,32 @@ export function EmptyState({
   explanation,
   nextStep,
   action,
+  icon,
   className,
 }: {
   title: string;
   explanation: string;
   nextStep?: string;
   action?: React.ReactNode;
+  icon?: React.ReactNode;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        'border-border bg-surface-muted flex flex-col items-start gap-2 rounded-lg border border-dashed p-6',
+        'border-border bg-surface flex flex-col items-center rounded-xl border px-6 py-12 text-center',
         className,
       )}
     >
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <p className="text-foreground-muted text-sm">{explanation}</p>
-      {nextStep ? <p className="text-foreground text-sm">{nextStep}</p> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
+      {icon ? (
+        <div className="bg-surface-muted text-foreground-subtle mb-5 flex size-11 items-center justify-center rounded-full">
+          {icon}
+        </div>
+      ) : null}
+      <h3 className="text-base font-semibold">{title}</h3>
+      <p className="text-foreground-muted mt-2 max-w-md text-sm text-pretty">{explanation}</p>
+      {nextStep ? <p className="text-foreground mt-3 max-w-md text-sm">{nextStep}</p> : null}
+      {action ? <div className="mt-6">{action}</div> : null}
     </div>
   );
 }

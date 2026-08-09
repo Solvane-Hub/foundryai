@@ -23,7 +23,7 @@ export function BusinessSelector({
   if (businesses.length <= 1) return null;
 
   return (
-    <form ref={formRef} action={selectBusinessAction}>
+    <form ref={formRef} action={selectBusinessAction} className="relative">
       <label htmlFor="business-selector" className="sr-only">
         Current business
       </label>
@@ -32,7 +32,7 @@ export function BusinessSelector({
         name="businessId"
         defaultValue={currentId}
         onChange={() => formRef.current?.requestSubmit()}
-        className="border-border bg-surface text-foreground h-9 max-w-[16rem] rounded-md border px-2 text-sm"
+        className="text-foreground hover:bg-surface-muted h-8 max-w-[15rem] cursor-pointer appearance-none rounded-md bg-transparent pr-7 pl-2.5 text-sm font-medium transition-colors outline-none"
       >
         {businesses.map((b) => (
           <option key={b.id} value={b.id}>
@@ -40,6 +40,18 @@ export function BusinessSelector({
           </option>
         ))}
       </select>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 16 16"
+        className="text-foreground-subtle pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="m4 6 4 4 4-4" />
+      </svg>
       <noscript>
         <button type="submit" className="ml-2 text-sm underline">
           Switch

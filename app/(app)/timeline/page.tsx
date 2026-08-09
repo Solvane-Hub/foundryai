@@ -1,15 +1,16 @@
-import { EmptyState } from '@/components/ui/empty-state';
+import type { Metadata } from 'next';
+import { NotBuiltYet } from '@/components/ui/not-built-yet';
+import { PageHeader } from '@/components/ui/page-header';
 
-export const metadata = { title: 'Timeline' };
+export const metadata: Metadata = { title: 'Timeline' };
 
 export default function TimelinePage() {
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Timeline</h1>
-      <EmptyState
-        title="Not built yet"
-        explanation="This part of the workspace arrives in a later phase of the roadmap."
-        nextStep="Nothing is shown here because nothing real exists to show yet."
+    <div className="flex max-w-3xl flex-col gap-8">
+      <PageHeader title="Timeline" />
+      <NotBuiltYet
+        feature="Your launch timeline"
+        explanation="A sequenced plan of every registration, licence and deadline your business needs, ordered by what blocks what."
       />
     </div>
   );

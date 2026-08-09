@@ -1,15 +1,16 @@
-import { EmptyState } from '@/components/ui/empty-state';
+import type { Metadata } from 'next';
+import { NotBuiltYet } from '@/components/ui/not-built-yet';
+import { PageHeader } from '@/components/ui/page-header';
 
-export const metadata = { title: 'Assistant' };
+export const metadata: Metadata = { title: 'Nova' };
 
 export default function AssistantPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Assistant</h1>
-      <EmptyState
-        title="Not built yet"
-        explanation="This part of the workspace arrives in a later phase of the roadmap."
-        nextStep="Nothing is shown here because nothing real exists to show yet."
+    <div className="flex max-w-3xl flex-col gap-8">
+      <PageHeader title="Nova" />
+      <NotBuiltYet
+        feature="Nova, your AI adviser"
+        explanation="A conversation with FoundryAI about your business, grounded in the same evidence as the rest of your workspace."
       />
     </div>
   );

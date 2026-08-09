@@ -1,15 +1,16 @@
-import { EmptyState } from '@/components/ui/empty-state';
+import type { Metadata } from 'next';
+import { NotBuiltYet } from '@/components/ui/not-built-yet';
+import { PageHeader } from '@/components/ui/page-header';
 
-export const metadata = { title: 'Funding' };
+export const metadata: Metadata = { title: 'Funding' };
 
 export default function FundingPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Funding</h1>
-      <EmptyState
-        title="Not built yet"
-        explanation="This part of the workspace arrives in a later phase of the roadmap."
-        nextStep="Nothing is shown here because nothing real exists to show yet."
+    <div className="flex max-w-3xl flex-col gap-8">
+      <PageHeader title="Funding" />
+      <NotBuiltYet
+        feature="Funding opportunities"
+        explanation="Grants, loans and programmes matched to your industry, stage and jurisdiction, with the eligibility rules that decided the match."
       />
     </div>
   );

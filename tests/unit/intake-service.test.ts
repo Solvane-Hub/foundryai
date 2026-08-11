@@ -4,6 +4,7 @@ import type { BusinessProfile } from '@/types/business';
 const mocks = vi.hoisted(() => ({
   profile: null as BusinessProfile | null,
   updateProfile: vi.fn(),
+  findBusinessById: vi.fn(),
 }));
 
 vi.mock('@/lib/db/business-profiles', () => ({
@@ -12,13 +13,13 @@ vi.mock('@/lib/db/business-profiles', () => ({
   updateProfile: mocks.updateProfile,
 }));
 vi.mock('@/lib/db/businesses', () => ({
-  findBusinessById: vi.fn(),
+  findBusinessById: mocks.findBusinessById,
   updateBusiness: vi.fn(),
 }));
 vi.mock('@/services/business', () => ({ assertTransition: vi.fn() }));
 vi.mock('@/services/audit', () => ({ recordAuditEvent: vi.fn() }));
 
-const { saveStep } = await import('@/services/intake');
+const { applyKnowledge, saveStep } = await import('@/services/intake');
 
 function profile(): BusinessProfile {
   return {
@@ -50,9 +51,15 @@ describe('saveStep', () => {
     mocks.profile = profile();
     mocks.updateProfile.mockReset();
     mocks.updateProfile.mockResolvedValue({ data: mocks.profile, error: null });
+    mocks.findBusinessById.mockReset();
+    mocks.findBusinessById.mockResolvedValue({
+      id: 'b1',
+      country_code: 'BS',
+      status: 'intake_started',
+    });
   });
 
-  it('preserves existing provenance while recording a funding decline', async () => {
+  it('preserves other provenance and records a founder funding decline', async () => {
     await saveStep({} as never, 'b1', 'u1', 4, { funding_requirement_amount: null }, {}, true);
 
     expect(mocks.updateProfile).toHaveBeenCalledWith(
@@ -63,10 +70,33 @@ describe('saveStep', () => {
           untouched: { value: 'keep this' },
           knowledge: {
             business: { source: 'nova', confidence: 'low' },
-            funding: { source: 'nova', confidence: 'medium', declined: true },
+            funding: { source: 'founder', declined: true, confirmed_at: expect.any(String) },
           },
         },
       }),
     );
+  });
+
+  it('writes a Nova proposal through the profile service without moving the intake cursor', async () => {
+    await applyKnowledge({} as never, 'b1', 'u1', {
+      patch: { description: 'A seafood takeaway in Nassau.' },
+      provenance: {
+        business: { source: 'nova', confidence: 'low', confirmed_at: null, run_id: 'run-1' },
+      },
+    });
+
+    expect(mocks.updateProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      'b1',
+      expect.objectContaining({
+        description: 'A seafood takeaway in Nassau.',
+        responses: expect.objectContaining({
+          knowledge: expect.objectContaining({
+            business: { source: 'nova', confidence: 'low', confirmed_at: null, run_id: 'run-1' },
+          }),
+        }),
+      }),
+    );
+    expect(mocks.updateProfile.mock.calls[0]?.[2]).not.toHaveProperty('last_completed_step');
   });
 });

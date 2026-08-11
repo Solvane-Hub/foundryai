@@ -7,12 +7,82 @@ import { findProfileByBusinessId, insertProfile, updateProfile } from '@/lib/db/
 import { findBusinessById, updateBusiness } from '@/lib/db/businesses';
 import type { IntakePatch } from '@/types/business';
 import { assertTransition } from '@/services/business';
-import { knowledgeCompleteness } from './knowledge';
+import { INTAKE_SLOTS, knowledgeCompleteness, type IntakeSlotId } from './knowledge';
 import type { RequestContext } from '@/services/auth';
+import type { KnowledgeProvenance } from '@/lib/validation/intake';
 
 /** `responses` is jsonb; anything non-object in there is not worth preserving. */
 function isPlainObject(value: unknown): value is Record<string, Json> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function mergeKnowledgeResponses(
+  responses: Json,
+  provenance: Partial<Record<IntakeSlotId, KnowledgeProvenance>>,
+  fundingDeclined?: boolean,
+): Record<string, Json> {
+  const existingResponses = isPlainObject(responses) ? responses : {};
+  const existingKnowledge = isPlainObject(existingResponses.knowledge)
+    ? existingResponses.knowledge
+    : {};
+  const mergedKnowledge: Record<string, Json> = { ...existingKnowledge };
+
+  for (const [slotId, record] of Object.entries(provenance) as [
+    IntakeSlotId,
+    KnowledgeProvenance,
+  ][]) {
+    const existing = isPlainObject(existingKnowledge[slotId]) ? existingKnowledge[slotId] : {};
+    // A founder correction establishes the value directly. Do not keep a Nova
+    // confidence or run id attached to that replacement fact.
+    const retained =
+      record.source === 'founder'
+        ? Object.fromEntries(
+            Object.entries(existing).filter(([key]) => key !== 'confidence' && key !== 'run_id'),
+          )
+        : existing;
+    mergedKnowledge[slotId] = { ...retained, ...record };
+  }
+
+  if (fundingDeclined !== undefined) {
+    const existingFunding = isPlainObject(existingKnowledge.funding)
+      ? existingKnowledge.funding
+      : {};
+    const pendingFunding = isPlainObject(mergedKnowledge.funding)
+      ? mergedKnowledge.funding
+      : existingFunding;
+    mergedKnowledge.funding = {
+      ...pendingFunding,
+      declined: fundingDeclined,
+    };
+  }
+
+  return { ...existingResponses, knowledge: mergedKnowledge };
+}
+
+async function resolveFundingCurrency(
+  db: SupabaseClient<Database>,
+  businessId: string,
+  patch: IntakePatch,
+): Promise<IntakePatch> {
+  const resolved: IntakePatch = { ...patch };
+  if (!('funding_requirement_amount' in resolved)) return resolved;
+
+  if (
+    resolved.funding_requirement_amount === null ||
+    resolved.funding_requirement_amount === undefined
+  ) {
+    resolved.funding_requirement_currency = null;
+    return resolved;
+  }
+
+  const business = await findBusinessById(db, businessId);
+  const { data: country } = await db
+    .from('countries')
+    .select('currency_code')
+    .eq('code', business?.country_code ?? '')
+    .maybeSingle();
+  resolved.funding_requirement_currency = country?.currency_code ?? null;
+  return resolved;
 }
 
 /**
@@ -26,12 +96,22 @@ export {
   knowledgeCompleteness,
   readKnowledge,
   readKnowledgeRecord,
+  isKnowledgeEstablished,
   type IntakeSlot,
   type IntakeSlotId,
   type KnowledgeSource,
   type KnowledgeState,
   type SlotKnowledge,
 } from './knowledge';
+
+export type { KnowledgeProvenance } from '@/lib/validation/intake';
+
+export interface KnowledgeApplication {
+  patch: IntakePatch;
+  provenance: Partial<Record<IntakeSlotId, KnowledgeProvenance>>;
+  /** Funding only: records an explicit "I don't know yet" answer. */
+  fundingDeclined?: boolean;
+}
 
 /**
  * Founder Intake Application Service.
@@ -134,42 +214,18 @@ export async function saveStep(
   // A funding amount requires a currency (DB constraint
   // bp_funding_currency_required_with_amount). It is derived from the business's
   // country rather than typed by the founder, so it cannot disagree.
-  const resolved: IntakePatch = { ...patch };
-  if ('funding_requirement_amount' in resolved) {
-    if (
-      resolved.funding_requirement_amount === null ||
-      resolved.funding_requirement_amount === undefined
-    ) {
-      resolved.funding_requirement_currency = null;
-    } else {
-      const business = await findBusinessById(db, businessId);
-      const { data: country } = await db
-        .from('countries')
-        .select('currency_code')
-        .eq('code', business?.country_code ?? '')
-        .maybeSingle();
-      resolved.funding_requirement_currency = country?.currency_code ?? null;
-    }
-  }
+  const resolved = await resolveFundingCurrency(db, businessId, patch);
 
   // Answer metadata, merged rather than replaced: `responses` will accumulate
   // provenance for every slot once Nova writes to it, and a step save must
   // never clear what another writer recorded (ADR-0020).
-  if (fundingDeclined !== undefined) {
-    const existingResponses = isPlainObject(profile.responses) ? profile.responses : {};
-    const existingKnowledge = isPlainObject(existingResponses.knowledge)
-      ? existingResponses.knowledge
-      : {};
-    const existingFunding = isPlainObject(existingKnowledge.funding)
-      ? existingKnowledge.funding
-      : {};
-    resolved.responses = {
-      ...existingResponses,
-      knowledge: {
-        ...existingKnowledge,
-        funding: { ...existingFunding, declined: fundingDeclined },
-      },
-    };
+  const slotId = INTAKE_SLOTS.find((slot) => slot.step === step)?.id;
+  if (slotId) {
+    resolved.responses = mergeKnowledgeResponses(
+      profile.responses,
+      { [slotId]: { source: 'founder', confirmed_at: new Date().toISOString() } },
+      fundingDeclined,
+    );
   }
 
   const { data, error } = await updateProfile(db, businessId, {
@@ -192,6 +248,49 @@ export async function saveStep(
     businessId,
     correlationId,
     metadata: { step },
+  });
+
+  return data;
+}
+
+/**
+ * Applies externally established business knowledge through the same profile
+ * service as founder intake. Nova is not implemented; this is its constrained
+ * future entry point, so it cannot create a parallel profile or bypass
+ * provenance/normalisation rules.
+ */
+export async function applyKnowledge(
+  db: SupabaseClient<Database>,
+  businessId: string,
+  ownerId: string,
+  application: KnowledgeApplication,
+  ctx: RequestContext = {},
+): Promise<BusinessProfile> {
+  const correlationId = ctx.correlationId ?? newCorrelationId();
+  const profile = await startOrResumeIntake(db, businessId, ownerId, ctx);
+  const resolved = await resolveFundingCurrency(db, businessId, application.patch);
+  resolved.responses = mergeKnowledgeResponses(
+    profile.responses,
+    application.provenance,
+    application.fundingDeclined,
+  );
+
+  const { data, error } = await updateProfile(db, businessId, resolved);
+  if (error || !data) {
+    throw new AppError({
+      code: 'UNEXPECTED',
+      humanMessage: 'We could not save that. Please try again.',
+      developerMessage: error ?? 'update returned no row',
+      correlationId,
+    });
+  }
+
+  await recordAuditEvent({
+    event: 'intake.knowledge_applied',
+    actorId: ownerId,
+    businessId,
+    correlationId,
+    metadata: { slots: Object.keys(application.provenance) },
   });
 
   return data;

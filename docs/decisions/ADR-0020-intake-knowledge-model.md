@@ -77,13 +77,13 @@ unfinishable.
 - **No migration.** The column exists, the constraint (`jsonb_typeof = 'object'`)
   already permits this shape, and the typed columns are unchanged.
 
-- **`KnowledgeState` declares `needs_confirmation` before anything emits it.**
-  A low-confidence extraction the founder has not confirmed is a real state
-  that must not be silently counted as complete. Declaring it now is what stops
-  every call site being written as a boolean and rewritten later. `readKnowledge()`
-  returns only `known` / `unknown` today and reports `source: 'founder'`,
-  because the five screens are the only writer that exists. **It does not
-  report a source it cannot substantiate.**
+- **`KnowledgeState` distinguishes confirmed, declined, unknown, and proposed
+  facts.** `readKnowledge()` consumes the documented `responses.knowledge`
+  provenance record. An unconfirmed Nova value is `needs_confirmation` and is
+  not counted as complete; an explicit funding decline is `declined` and is a
+  resolved answer without an invented figure. Any record without provenance
+  remains founder-established, so the reader never claims a source it cannot
+  substantiate.
 
 ## Consequences
 
@@ -100,6 +100,20 @@ unfinishable.
   because any user-visible behaviour moved.
 - Cost: one more concept (slots) between the columns and the UI, and a jsonb
   shape that is documented here before it is enforced anywhere.
+
+## Amendment, 2026-08-11 — provenance is now a live, constrained seam
+
+The profile service now writes founder provenance for each saved intake step
+and exposes `applyKnowledge()` as the only future external knowledge write
+path. It normalises funding currency, merges only the `responses.knowledge`
+metadata, preserves unrelated response data, and does not advance the founder's
+guided-flow cursor. A founder correction replaces Nova confidence and run
+metadata with founder provenance.
+
+The dashboard, intake route, and review route all consume `readKnowledge()`.
+They show the same five slots; confirmed and declined slots count as progress,
+while `needs_confirmation` remains actionable but unfinished. This does not add
+Nova conversation, extraction, analytics, or another database model.
 
 ## Amendment, 2026-08-09 — the funding ambiguity, resolved
 

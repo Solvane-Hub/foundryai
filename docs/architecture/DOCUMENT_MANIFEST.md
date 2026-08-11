@@ -4,6 +4,8 @@
 **Owner:** Jamil Nash (Co-Founder & CEO) · **Maintained by:** Lead Software Engineer
 **Last updated:** 2026-08-09 — **ADR-0020** accepted (one business profile; intake progress reads knowledge, not the guided-flow cursor; Nova extension point documented, Nova not implemented). Previously: 2026-08-08 — four previously unregistered documents retired (D1–D5); Knowledge Engineering series **7 of 7 registered and mirrored**; ✅ **zero unresolved conflicts** (C1–C3, R1–R3, A1–A12 all resolved; ADR-0015 unchanged throughout). Previously: 2026-08-07 — **AI Architecture series complete (15/15)**; ADRs 0015–0019 ratified/accepted
 
+**Milestone update (2026-08-11):** ADR-0020 now has a live per-slot provenance seam and a shared confirmed / declined / unknown / needs-confirmation reader for dashboard, intake, and review. Nova conversation remains unimplemented.
+
 > **Rule:** every architecture document must appear here. A document that is not in this manifest is not canonical. Update this file in the same commit as the document it describes.
 
 **Legend —** Status: `Canonical` · `Draft` · `Superseded` · `Planned` · `Blocked`

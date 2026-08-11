@@ -3,6 +3,7 @@ import type { BusinessProfile } from '@/types/business';
 import {
   INTAKE_SLOTS,
   hasDeclinedFunding,
+  isKnowledgeEstablished,
   isSlotKnownForStep,
   knowledgeCompleteness,
   readKnowledge,
@@ -118,6 +119,15 @@ describe('per-slot rules', () => {
     ).toBe(true);
   });
 
+  it('keeps an explicit funding decline distinct from a provided amount', () => {
+    const declined = readKnowledge({
+      ...EMPTY,
+      responses: { knowledge: { funding: { source: 'founder', declined: true } } },
+    })[3]!;
+    expect(declined).toMatchObject({ state: 'declined', source: 'founder' });
+    expect(isKnowledgeEstablished(declined.state)).toBe(true);
+  });
+
   it('reads the decline flag defensively', () => {
     expect(
       hasDeclinedFunding({ ...EMPTY, responses: { knowledge: { funding: { declined: true } } } }),
@@ -145,6 +155,32 @@ describe('provenance', () => {
     // Until `responses.knowledge` is populated, the intake screens are the
     // only writer. Nothing may report `nova`.
     for (const k of readKnowledge(FULL)) expect(k.source).toBe('founder');
+  });
+
+  it('holds an unconfirmed Nova proposal out of progress until the founder confirms it', () => {
+    const proposed = {
+      ...EMPTY,
+      description: 'A seafood takeaway in Nassau.',
+      responses: {
+        knowledge: {
+          business: { source: 'nova', confidence: 'low', confirmed_at: null, run_id: 'run-1' },
+        },
+      },
+    } as BusinessProfile;
+    const business = readKnowledge(proposed)[0]!;
+    expect(business).toMatchObject({ state: 'needs_confirmation', source: 'nova' });
+    expect(isKnowledgeEstablished(business.state)).toBe(false);
+    expect(knowledgeCompleteness(proposed).known).toBe(0);
+
+    const confirmed = {
+      ...proposed,
+      responses: {
+        knowledge: {
+          business: { source: 'nova', confidence: 'low', confirmed_at: '2026-08-11T12:00:00Z' },
+        },
+      },
+    } as BusinessProfile;
+    expect(readKnowledge(confirmed)[0]).toMatchObject({ state: 'known', source: 'nova' });
   });
 });
 

@@ -133,7 +133,7 @@ describe('BusinessSnapshot', () => {
 
   it('accounts for unanswered questions rather than padding the list', () => {
     render(<BusinessSnapshot rows={[]} unanswered={3} />);
-    expect(screen.getByText(/questions are/)).toBeTruthy();
+    expect(screen.getByText(/parts of your profile need review/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Continue intake' })).toHaveAttribute(
       'href',
       '/intake',
@@ -150,6 +150,35 @@ describe('BusinessSnapshot', () => {
     expect(screen.getByRole('link', { name: 'Edit stage' })).toHaveAttribute(
       'href',
       '/intake?step=2',
+    );
+  });
+
+  it('writes each unresolved state and offers its real next action', () => {
+    render(
+      <BusinessSnapshot
+        rows={[
+          {
+            label: 'Business',
+            value: 'A seafood takeaway',
+            href: '/intake?step=1',
+            state: 'needs_confirmation',
+          },
+          { label: 'Funding', href: '/intake?step=4', state: 'declined' },
+          { label: 'Goals', href: '/intake?step=5', state: 'unknown' },
+        ]}
+        unanswered={2}
+      />,
+    );
+    expect(screen.getByText('Needs confirmation')).toBeTruthy();
+    expect(screen.getByText('Open question')).toBeTruthy();
+    expect(screen.getByText('Needs your answer')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Review and confirm business' })).toHaveAttribute(
+      'href',
+      '/intake?step=1',
+    );
+    expect(screen.getByRole('link', { name: 'Answer goals' })).toHaveAttribute(
+      'href',
+      '/intake?step=5',
     );
   });
 });

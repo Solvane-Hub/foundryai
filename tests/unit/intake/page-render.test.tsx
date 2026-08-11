@@ -93,12 +93,11 @@ describe('/intake renders every step', () => {
     });
   }
 
-  it('clamps a step the founder has not reached yet', async () => {
+  it('honours a direct link to a requested knowledge slot', async () => {
     profile = { ...profile, last_completed_step: 1 };
     const ui = await IntakePage({ searchParams: Promise.resolve({ step: '5' }) });
     render(ui);
-    // `stepFromParam` allows at most one step beyond the last answered.
-    expect(screen.getByLabelText(/Where are you today\?/)).toBeTruthy();
+    expect(screen.getByLabelText(/What do you want to achieve\?/)).toBeTruthy();
   });
 
   it('shows the currency the service will store, not a typed-in one', async () => {

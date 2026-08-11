@@ -107,18 +107,39 @@ export const stepFundingSchema = z
  * defensively because this is untrusted jsonb: a malformed object must degrade
  * to "nothing recorded", never break a page render.
  *
- * `declined` is the only key written today. Nova will add `source`,
- * `confidence` and `confirmed_at` alongside it.
+ * Founder intake records `source: 'founder'` and a confirmation timestamp.
+ * A future Nova writer can add its source, confidence and run id alongside
+ * the same value metadata; no answer value belongs in this object.
  */
+export const knowledgeSourceSchema = z.enum(['founder', 'nova']);
+export const knowledgeConfidenceSchema = z.enum(['low', 'medium', 'high']);
+
+/** Provenance only. The corresponding value always stays in a typed profile column. */
+export const knowledgeProvenanceSchema = z.object({
+  source: knowledgeSourceSchema.optional(),
+  confidence: knowledgeConfidenceSchema.optional(),
+  confirmed_at: z.string().datetime({ offset: true }).nullable().optional(),
+  run_id: z.string().min(1).optional(),
+});
+
+const fundingKnowledgeRecordSchema = knowledgeProvenanceSchema.extend({
+  declined: z.boolean().optional(),
+});
+
 export const knowledgeRecordSchema = z.object({
   knowledge: z
     .object({
-      funding: z.object({ declined: z.boolean().optional() }).optional(),
+      business: knowledgeProvenanceSchema.optional(),
+      stage: knowledgeProvenanceSchema.optional(),
+      team: knowledgeProvenanceSchema.optional(),
+      funding: fundingKnowledgeRecordSchema.optional(),
+      goals: knowledgeProvenanceSchema.optional(),
     })
     .optional(),
 });
 
 export type KnowledgeRecord = z.infer<typeof knowledgeRecordSchema>;
+export type KnowledgeProvenance = z.infer<typeof knowledgeProvenanceSchema>;
 
 export const stepGoalsSchema = z.object({
   founderGoals: z
@@ -138,14 +159,14 @@ export const INTAKE_STEPS = [
 
 export const TOTAL_INTAKE_STEPS = INTAKE_STEPS.length;
 
-export function stepFromParam(raw: string | undefined, lastCompleted: number): number {
+export function stepFromParam(raw: string | undefined, fallbackStep: number): number {
   const parsed = Number(raw);
   if (Number.isInteger(parsed) && parsed >= 1 && parsed <= TOTAL_INTAKE_STEPS) {
-    // Never let a founder jump ahead of what they've answered — later steps
-    // would have nothing to resume from.
-    return Math.min(parsed, lastCompleted + 1);
+    // Direct links from the profile and dashboard must land on the slot they
+    // name, including a Nova-proposed fact that has not moved the flow cursor.
+    return parsed;
   }
-  return Math.min(lastCompleted + 1, TOTAL_INTAKE_STEPS);
+  return Math.min(Math.max(fallbackStep + 1, 1), TOTAL_INTAKE_STEPS);
 }
 
 export type BusinessStage = (typeof BUSINESS_STAGES)[number];

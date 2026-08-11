@@ -9,7 +9,9 @@ import {
   getIntakeProfile,
   intakeProgress,
   hasDeclinedFunding,
+  isKnowledgeEstablished,
   readKnowledge,
+  type KnowledgeState,
 } from '@/services/intake';
 import { CURRENT_BUSINESS_COOKIE } from '@/lib/business-cookie';
 import { BUSINESS_STAGE_LABELS, TOTAL_INTAKE_STEPS } from '@/lib/validation/intake';
@@ -39,7 +41,7 @@ function Block({
   title,
   step,
   lines,
-  known,
+  state,
   /** Shown instead of the lines when the slot is known but holds no figure. */
   note,
   wide,
@@ -47,10 +49,14 @@ function Block({
   title: string;
   step: number;
   lines: readonly Line[];
-  known: boolean;
+  state: KnowledgeState;
   note?: string;
   wide?: boolean;
 }) {
+  const established = isKnowledgeEstablished(state);
+  const needsConfirmation = state === 'needs_confirmation';
+  const action = established ? 'Edit' : needsConfirmation ? 'Review and confirm' : 'Answer this';
+  const ariaAction = established ? 'Edit' : needsConfirmation ? 'Review and confirm' : 'Answer';
   return (
     <div className={cn('group flex flex-col gap-3', wide && 'sm:col-span-2')}>
       <SurfaceLabel as="dt" className="flex items-baseline justify-between gap-4">
@@ -60,27 +66,27 @@ function Block({
             aria-hidden="true"
             className={cn(
               'flex size-3 shrink-0 items-center justify-center rounded-full',
-              known ? 'bg-bahama-turquoise text-abyss' : 'ring-1 ring-white/44',
+              established ? 'bg-bahama-turquoise text-abyss' : 'ring-1 ring-white/44',
             )}
           >
-            {known ? <Check className="size-1.5" strokeWidth={5} /> : null}
+            {established ? <Check className="size-1.5" strokeWidth={5} /> : null}
           </span>
           {title}
         </span>
 
         <Link
           href={`/intake?step=${step}`}
-          aria-label={known ? `Edit ${title.toLowerCase()}` : `Answer ${title.toLowerCase()}`}
+          aria-label={`${ariaAction} ${title.toLowerCase()}`}
           className="text-on-glass-subtle hover:text-bahama-turquoise inline-flex shrink-0 items-center gap-1.5 rounded-sm text-xs tracking-normal normal-case transition-colors duration-150 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         >
-          {known ? (
+          {established ? (
             <>
               <Pencil aria-hidden="true" className="size-3" strokeWidth={1.75} />
               Edit
             </>
           ) : (
             <>
-              Answer this
+              {action}
               <ArrowRight aria-hidden="true" className="size-3" strokeWidth={2} />
             </>
           )}
@@ -190,14 +196,14 @@ export default async function IntakeReviewPage() {
           <Block
             title="What the business does"
             step={1}
-            known={knowledge.get('business')?.state === 'known'}
+            state={knowledge.get('business')?.state ?? 'unknown'}
             lines={[{ value: profile.description }]}
             wide
           />
           <Block
             title="Stage and location"
             step={2}
-            known={knowledge.get('stage')?.state === 'known'}
+            state={knowledge.get('stage')?.state ?? 'unknown'}
             lines={[
               { label: 'Stage', value: stage },
               { label: 'Operating in', value: profile.location },
@@ -206,7 +212,7 @@ export default async function IntakeReviewPage() {
           <Block
             title="Team"
             step={3}
-            known={knowledge.get('team')?.state === 'known'}
+            state={knowledge.get('team')?.state ?? 'unknown'}
             lines={[
               {
                 value:
@@ -221,7 +227,7 @@ export default async function IntakeReviewPage() {
           <Block
             title="Funding"
             step={4}
-            known={knowledge.get('funding')?.state === 'known'}
+            state={knowledge.get('funding')?.state ?? 'unknown'}
             lines={[{ value: money }]}
             // "Doesn't know yet" is a recorded answer, not an empty field.
             {...(money === null && declinedFunding
@@ -231,7 +237,7 @@ export default async function IntakeReviewPage() {
           <Block
             title="Goals"
             step={5}
-            known={knowledge.get('goals')?.state === 'known'}
+            state={knowledge.get('goals')?.state ?? 'unknown'}
             lines={[{ value: profile.founder_goals }]}
           />
         </dl>

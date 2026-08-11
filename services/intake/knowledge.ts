@@ -1,5 +1,10 @@
 import type { BusinessProfile } from '@/types/business';
-import { INTAKE_STEPS, TOTAL_INTAKE_STEPS, knowledgeRecordSchema } from '@/lib/validation/intake';
+import {
+  INTAKE_STEPS,
+  TOTAL_INTAKE_STEPS,
+  knowledgeRecordSchema,
+  type KnowledgeProvenance,
+} from '@/lib/validation/intake';
 
 /**
  * What FoundryAI knows about a business, and how much of it.
@@ -28,8 +33,8 @@ import { INTAKE_STEPS, TOTAL_INTAKE_STEPS, knowledgeRecordSchema } from '@/lib/v
  * performs the write, exactly as the five screens do (agents never write to
  * the database — CLAUDE.md, ADR-0016/0017).
  *
- * What the schema does NOT yet carry is PROVENANCE — who established a fact,
- * how confident the extraction was, and whether the founder has confirmed it.
+ * `responses.knowledge` carries PROVENANCE — who established a fact, how
+ * confident an extraction was, and whether the founder has confirmed it.
  * `business_profiles.responses` (jsonb, `not null default '{}'`) already exists
  * and is currently unused by any code path. It is the intended home:
  *
@@ -41,28 +46,23 @@ import { INTAKE_STEPS, TOTAL_INTAKE_STEPS, knowledgeRecordSchema } from '@/lib/v
  *     }
  *   }
  *
- * Provenance only — never a second copy of the value. When that lands,
- * `KnowledgeState` gains `needs_confirmation` (a fact Nova extracted with low
- * confidence that the founder has not yet confirmed) and `readKnowledge` reads
- * it from `responses`. No migration, no new table, no change to the meaning of
- * the typed columns, and no change to any caller of `knowledgeCompleteness`.
- *
- * Until then this module reports `founder` for every known slot, because the
- * intake screens are the only writer that exists. It does not report a source
- * it cannot substantiate, and nothing in the UI renders provenance yet.
+ * Provenance only — never a second copy of the value. `readKnowledge` reads it
+ * defensively and emits `needs_confirmation` for an unconfirmed Nova proposal.
+ * No migration, no new table, and no change to the meaning of the typed
+ * columns are required.
  */
 
 /** One piece of business knowledge. Ids are the `INTAKE_STEPS` slugs — one vocabulary. */
 export type IntakeSlotId = (typeof INTAKE_STEPS)[number]['slug'];
 
 /**
- * `needs_confirmation` is DECLARED, not yet emitted. It is the state a
- * low-confidence Nova extraction will occupy, and declaring it here is what
- * stops a caller writing `known ? … : …` and having to be rewritten later.
+ * A Nova proposal remains `needs_confirmation` until the founder confirms or
+ * replaces it. Consumers must not reduce this to a boolean: `declined` is an
+ * established answer without an amount, while `unknown` has no answer at all.
  */
-export type KnowledgeState = 'known' | 'needs_confirmation' | 'unknown';
+export type KnowledgeState = 'known' | 'declined' | 'needs_confirmation' | 'unknown';
 
-/** Who established the fact. Only `founder` is reachable today. */
+/** Who established the fact. */
 export type KnowledgeSource = 'founder' | 'nova';
 
 export interface IntakeSlot {
@@ -101,6 +101,11 @@ export function hasDeclinedFunding(profile: BusinessProfile | null): boolean {
   return readKnowledgeRecord(profile).funding?.declined === true;
 }
 
+function provenanceFor(profile: BusinessProfile, id: IntakeSlotId): KnowledgeProvenance | null {
+  const record = readKnowledgeRecord(profile)[id];
+  return record ?? null;
+}
+
 /**
  * Is the fact behind each slot actually held?
  *
@@ -122,9 +127,8 @@ function isKnown(profile: BusinessProfile, id: IntakeSlotId): boolean {
       return profile.employee_count !== null && profile.employee_count !== undefined;
     case 'funding':
       return (
-        (profile.funding_requirement_amount !== null &&
-          profile.funding_requirement_amount !== undefined) ||
-        hasDeclinedFunding(profile)
+        profile.funding_requirement_amount !== null &&
+        profile.funding_requirement_amount !== undefined
       );
     case 'goals':
       return hasText(profile.founder_goals);
@@ -137,15 +141,35 @@ function hasText(value: string | null | undefined): boolean {
 
 export function readKnowledge(profile: BusinessProfile | null): SlotKnowledge[] {
   return INTAKE_SLOTS.map((slot) => {
-    const known = profile !== null && isKnown(profile, slot.id);
+    if (!profile) return { slot, state: 'unknown' as const, source: null };
+
+    const provenance = provenanceFor(profile, slot.id);
+    const source = provenance?.source ?? 'founder';
+    const hasValue = isKnown(profile, slot.id);
+    const needsConfirmation =
+      hasValue && provenance?.source === 'nova' && provenance.confirmed_at === null;
+
+    // A declined funding figure resolves the slot without inventing an amount.
+    // A real amount wins if old or manually-edited metadata is contradictory.
+    const state: KnowledgeState = hasValue
+      ? needsConfirmation
+        ? 'needs_confirmation'
+        : 'known'
+      : slot.id === 'funding' && hasDeclinedFunding(profile)
+        ? 'declined'
+        : 'unknown';
+
     return {
       slot,
-      state: known ? ('known' as const) : ('unknown' as const),
-      // The five screens are the only writer today. When `responses.knowledge`
-      // is populated this reads the recorded source instead of assuming one.
-      source: known ? ('founder' as const) : null,
+      state,
+      source: state === 'unknown' ? null : source,
     };
   });
+}
+
+/** A resolved slot can progress intake. A Nova proposal still needs the founder. */
+export function isKnowledgeEstablished(state: KnowledgeState): boolean {
+  return state === 'known' || state === 'declined';
 }
 
 /**
@@ -160,11 +184,12 @@ export function knowledgeCompleteness(profile: BusinessProfile | null): {
   total: number;
   isComplete: boolean;
 } {
-  const known = readKnowledge(profile).filter((k) => k.state === 'known').length;
+  const known = readKnowledge(profile).filter((k) => isKnowledgeEstablished(k.state)).length;
   return { known, total: TOTAL_INTAKE_STEPS, isComplete: known >= TOTAL_INTAKE_STEPS };
 }
 
 /** Whether the screen for one step already has its answer stored. */
 export function isSlotKnownForStep(profile: BusinessProfile | null, step: number): boolean {
-  return readKnowledge(profile).find((k) => k.slot.step === step)?.state === 'known';
+  const state = readKnowledge(profile).find((k) => k.slot.step === step)?.state;
+  return state !== undefined && isKnowledgeEstablished(state);
 }

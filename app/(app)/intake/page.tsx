@@ -8,6 +8,7 @@ import {
   startOrResumeIntake,
   intakeProgress,
   isSlotKnownForStep,
+  isKnowledgeEstablished,
   readKnowledge,
   hasDeclinedFunding,
 } from '@/services/intake';
@@ -86,7 +87,9 @@ export default async function IntakePage({
   // exist before the first answer is submitted.
   const profile = await startOrResumeIntake(db, current.id, user!.id);
   const progress = intakeProgress(profile);
-  const step = stepFromParam(params.step, profile.last_completed_step);
+  const knowledge = readKnowledge(profile);
+  const firstUnresolved = knowledge.find((entry) => !isKnowledgeEstablished(entry.state));
+  const step = stepFromParam(params.step, (firstUnresolved?.slot.step ?? TOTAL_INTAKE_STEPS) - 1);
   const meta = INTAKE_STEPS[step - 1]!;
   const isLastStep = step === TOTAL_INTAKE_STEPS;
 
@@ -109,10 +112,10 @@ export default async function IntakePage({
     funding: 'Funding',
     goals: 'Goals',
   };
-  const slots: RailSlot[] = readKnowledge(profile).map((k) => ({
+  const slots: RailSlot[] = knowledge.map((k) => ({
     step: k.slot.step,
     label: RAIL_LABELS[k.slot.id] ?? k.slot.title,
-    known: k.state === 'known',
+    known: isKnowledgeEstablished(k.state),
   }));
 
   // Plain values only. Every prop below crosses into a Client Component.

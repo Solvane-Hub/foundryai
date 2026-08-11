@@ -11,9 +11,8 @@ import { cn } from '@/lib/utils/cn';
  * front of them, and what is still missing. That is the same information the
  * dashboard dial and the review screen report, in the same vocabulary.
  *
- * A slot already established is a LINK back to it. Forward jumps are not
- * offered because `stepFromParam` clamps them anyway; offering a link that
- * silently lands somewhere else would be worse than not offering one.
+ * A slot already established is a LINK back to it. Unresolved slots stay as
+ * status indicators; their dedicated actions live in dashboard and review.
  *
  * ── Accessibility ───────────────────────────────────────────────────────────
  *
@@ -130,8 +129,7 @@ function Slot({ slot, current }: { slot: RailSlot; current: boolean }) {
 
   const shell = 'flex w-full flex-col gap-2 rounded-md pt-1 pb-0.5';
 
-  // Only what is already established is reachable; `stepFromParam` would clamp
-  // anything further forward, so a link there would lie about its destination.
+  // Only what is already established is reachable from the progress rail.
   if (slot.known && !current) {
     return (
       <Link href={`/intake?step=${slot.step}`} className={cn(shell, 'group')}>

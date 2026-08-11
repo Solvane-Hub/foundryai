@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/services/auth';
 import { getOwnProfile } from '@/services/profile';
 import { getActiveCountries, listBusinesses, resolveCurrentBusiness } from '@/services/business';
-import { getIntakeProfile, intakeProgress } from '@/services/intake';
+import { getIntakeProfile, intakeProgress, readKnowledge } from '@/services/intake';
 import { buildJourney } from '@/services/progress';
 import { CURRENT_BUSINESS_COOKIE } from '@/lib/business-cookie';
 import { BUSINESS_STAGE_LABELS, type BusinessStage } from '@/lib/validation/intake';
@@ -104,39 +104,58 @@ export default async function DashboardPage() {
   const countryName =
     countries.find((c) => c.code === current.country_code)?.name ?? current.country_code;
 
-  // Only rows with a real value. An unanswered question is left out entirely
-  // and accounted for in the footnote instead.
-  const rows: SnapshotRow[] = [{ label: 'Jurisdiction', value: countryName, href: '/settings' }];
-  if (current.industry)
-    rows.push({ label: 'Industry', value: current.industry, href: '/settings' });
-  if (intake?.business_stage) {
-    rows.push({
-      label: 'Stage',
-      value: BUSINESS_STAGE_LABELS[intake.business_stage as BusinessStage] ?? intake.business_stage,
+  const knowledge = new Map(readKnowledge(intake).map((entry) => [entry.slot.id, entry]));
+  const stage = intake?.business_stage
+    ? (BUSINESS_STAGE_LABELS[intake.business_stage as BusinessStage] ?? intake.business_stage)
+    : undefined;
+  const stageAndLocation = [stage, intake?.location].filter(Boolean).join(' · ') || undefined;
+  const funding =
+    intake?.funding_requirement_amount !== null && intake?.funding_requirement_amount !== undefined
+      ? `${intake.funding_requirement_currency ?? ''} ${Number(
+          intake.funding_requirement_amount,
+        ).toLocaleString()}`.trim()
+      : undefined;
+
+  // The same five slots read by intake and review. Their state is shown even
+  // when a value is absent, so incomplete knowledge never disappears from the
+  // founder's understanding of the business.
+  const rows: SnapshotRow[] = [
+    {
+      label: 'Business',
+      value: intake?.description ?? undefined,
+      href: '/intake?step=1',
+      state: knowledge.get('business')?.state ?? 'unknown',
+    },
+    {
+      label: 'Stage and location',
+      value: stageAndLocation,
       href: '/intake?step=2',
-    });
-  }
-  if (intake?.location)
-    rows.push({ label: 'Location', value: intake.location, href: '/intake?step=2' });
-  if (typeof intake?.employee_count === 'number') {
-    rows.push({
+      state: knowledge.get('stage')?.state ?? 'unknown',
+    },
+    {
       label: 'Team',
-      value: intake.employee_count === 1 ? 'Just you' : `${intake.employee_count} people`,
+      value:
+        typeof intake?.employee_count === 'number'
+          ? intake.employee_count === 1
+            ? 'Just you'
+            : `${intake.employee_count} people`
+          : undefined,
       href: '/intake?step=3',
-    });
-  }
-  if (
-    intake?.funding_requirement_amount !== null &&
-    intake?.funding_requirement_amount !== undefined
-  ) {
-    rows.push({
-      label: 'Funding needed',
-      value: `${intake.funding_requirement_currency ?? ''} ${Number(
-        intake.funding_requirement_amount,
-      ).toLocaleString()}`.trim(),
+      state: knowledge.get('team')?.state ?? 'unknown',
+    },
+    {
+      label: 'Funding',
+      value: funding,
       href: '/intake?step=4',
-    });
-  }
+      state: knowledge.get('funding')?.state ?? 'unknown',
+    },
+    {
+      label: 'Goals',
+      value: intake?.founder_goals ?? undefined,
+      href: '/intake?step=5',
+      state: knowledge.get('goals')?.state ?? 'unknown',
+    },
+  ];
 
   return (
     <div className="workspace-env flex flex-col gap-6 sm:gap-8">

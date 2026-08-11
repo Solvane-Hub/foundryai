@@ -24,10 +24,11 @@ describe('stepFromParam — resume logic', () => {
     expect(stepFromParam('2', 4)).toBe(2);
   });
 
-  it('refuses to jump ahead of what has been answered', () => {
-    // Step 5 with nothing answered would have nothing to resume from.
-    expect(stepFromParam('5', 0)).toBe(1);
-    expect(stepFromParam('4', 1)).toBe(2);
+  it('honours an explicit link to any valid knowledge slot', () => {
+    // Dashboard and review links must still work when a slot was supplied by
+    // another writer and the guided-flow cursor has not advanced.
+    expect(stepFromParam('5', 0)).toBe(5);
+    expect(stepFromParam('4', 1)).toBe(4);
   });
 
   it('clamps at the final step', () => {

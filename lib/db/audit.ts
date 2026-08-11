@@ -20,6 +20,7 @@ export type AuditEvent =
   | 'business.archived'
   | 'intake.started'
   | 'intake.step_saved'
+  | 'intake.knowledge_applied'
   | 'intake.completed';
 
 export interface AuditEntry {

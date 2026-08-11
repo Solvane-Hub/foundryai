@@ -73,6 +73,8 @@ export async function saveIntakeStepAction(
 
   let patch: IntakePatch;
   let fieldErrors: Record<string, string[]> | undefined;
+  // Step 4 only. Answer metadata, not a column — the service owns the layout.
+  let fundingDeclined: boolean | undefined;
 
   switch (step) {
     case 1: {
@@ -97,9 +99,15 @@ export async function saveIntakeStepAction(
       break;
     }
     case 4: {
-      const r = stepFundingSchema.safeParse({ fundingAmount: formData.get('fundingAmount') });
+      const r = stepFundingSchema.safeParse({
+        fundingAmount: formData.get('fundingAmount'),
+        fundingUnknown: formData.get('fundingUnknown'),
+      });
       if (!r.success) fieldErrors = toFieldErrors(r.error.issues);
-      else patch = { funding_requirement_amount: r.data.fundingAmount ?? null };
+      else {
+        patch = { funding_requirement_amount: r.data.fundingAmount ?? null };
+        fundingDeclined = r.data.fundingUnknown;
+      }
       break;
     }
     default: {
@@ -137,7 +145,7 @@ export async function saveIntakeStepAction(
         humanMessage: 'Create a business before starting intake.',
       });
 
-    await intakeService.saveStep(db, businessId, user.id, step, patch!, ctx);
+    await intakeService.saveStep(db, businessId, user.id, step, patch!, ctx, fundingDeclined);
     revalidatePath('/intake');
     return ok({ nextStep: Math.min(step + 1, TOTAL_INTAKE_STEPS) });
   } catch (error) {

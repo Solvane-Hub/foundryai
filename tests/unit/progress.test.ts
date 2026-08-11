@@ -16,19 +16,29 @@ function business(): Business {
   };
 }
 
-function profile(step: number, completedAt: string | null = null): BusinessProfile {
+/**
+ * A profile holding `answeredSlots` of the five facts.
+ *
+ * The journey reads knowledge, not `last_completed_step` (ADR-0020), so a
+ * fixture that only moves the cursor no longer describes an answered intake.
+ */
+function profile(
+  answeredSlots: number,
+  completedAt: string | null = null,
+  cursor = answeredSlots,
+): BusinessProfile {
   return {
     id: 'p1',
     business_id: 'b1',
-    description: null,
-    founder_goals: null,
-    location: null,
-    business_stage: null,
-    employee_count: null,
-    funding_requirement_amount: null,
-    funding_requirement_currency: null,
+    description: answeredSlots >= 1 ? 'A seafood takeaway in Nassau.' : null,
+    business_stage: answeredSlots >= 2 ? 'idea' : null,
+    location: answeredSlots >= 2 ? 'Nassau' : null,
+    employee_count: answeredSlots >= 3 ? 3 : null,
+    funding_requirement_amount: answeredSlots >= 4 ? 50000 : null,
+    funding_requirement_currency: answeredSlots >= 4 ? 'BSD' : null,
+    founder_goals: answeredSlots >= 5 ? 'Open a second location.' : null,
     responses: {},
-    last_completed_step: step,
+    last_completed_step: cursor,
     completed_at: completedAt,
     created_at: '2026-08-07T00:00:00Z',
     updated_at: '2026-08-07T00:00:00Z',

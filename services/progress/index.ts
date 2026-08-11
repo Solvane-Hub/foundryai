@@ -1,5 +1,9 @@
 import type { Business, BusinessProfile } from '@/types/business';
 import { TOTAL_INTAKE_STEPS } from '@/lib/validation/intake';
+// The knowledge module only, not the Intake service: this needs the pure
+// reader, and importing the service would drag Supabase and audit into a
+// function that touches neither.
+import { knowledgeCompleteness } from '@/services/intake/knowledge';
 
 /**
  * Founder journey progress (Phase 7).
@@ -33,7 +37,11 @@ export function buildJourney(
   profile: BusinessProfile | null,
 ): JourneyProgress {
   const hasBusiness = Boolean(business);
-  const answered = Math.min(profile?.last_completed_step ?? 0, TOTAL_INTAKE_STEPS);
+  // Knowledge, not the guided-flow cursor (ADR-0020). The dashboard's "next
+  // move" copy and the intake rail must report the same number, or a founder
+  // whose profile Nova populated would read "0 of 5 answered" beside a dial
+  // showing three.
+  const answered = knowledgeCompleteness(profile).known;
   const intakeStarted = hasBusiness && answered > 0;
   const intakeDone = Boolean(profile?.completed_at);
 

@@ -50,7 +50,7 @@ document — status, version, Notion URL, local path, Drive location, owner,
 related documents, ADRs, evidence. **A document not in the manifest is not
 canonical.** Read the manifest before assuming a document does or does not exist.
 
-Decisions live in `docs/decisions/` as ADR-0001 … ADR-0019 and are binding.
+Decisions live in `docs/decisions/` as ADR-0001 … ADR-0020 and are binding.
 
 ## Trust model (Trust Layer Specification v1.0)
 
@@ -177,7 +177,7 @@ ADR-0015 unchanged). Key outcomes now binding:
   filtering → semantic/hybrid retrieval → trust filtering**. The Knowledge Graph is not the
   system of record; traversal is not a prerequisite for discovering obligations.
 - **24 shadow ADRs retired** (`ADR-RE-*`, `ADR-KG-*`, `ADR-RM-*`, `ADR-EC-*`), none promoted.
-  Binding decisions live only in `docs/decisions/` as ADR-0001 … ADR-0019.
+  Binding decisions live only in `docs/decisions/` as ADR-0001 … ADR-0020.
 - **Harvested:** "Why?" evidence panel → **Launch Plan §5A** · taxonomy expansion →
   **Coordinator §5A** · conditional requirement logic → **K3 §7.1**. Mapping in the manifest.
 
@@ -188,3 +188,13 @@ mistaken for real guidance — including in seeds, placeholders and demos.
 **Implementation is blocked on founder decisions:** embedding model (KI1/MP-1),
 gold-standard curation (EV1), data residency (MP-2), reviewer staffing (HR1),
 legal disclaimer and accountability (SF1/SF3), reproducibility vs erasure (VR1).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -178,11 +178,50 @@
   --color-bahama-sky: oklch(63.6% 0.132 244); /* #3592d5 sky */
   --color-bahama-sand: oklch(91.6% 0.016 183); /* #d8e7e4 sand + cay */
 
+  /* The turquoise that works on a LIGHT surface.
+     `bahama-turquoise` is tuned for ink and measures 1.95:1 on canvas — it
+     cannot mark state in the workspace, and white on it is 2.05:1. This is the
+     same hue family at a lightness that carries a white glyph (6.00:1) while
+     still reading against canvas. Same relationship as `brand` /
+     `brand-on-ink`, in the other direction.
+
+     Note: `.marketing-journey` further down carries this exact value inline,
+     from before the token existed. Point it here next time that file is
+     legitimately touched. */
+  --color-bahama-teal: oklch(48% 0.105 200);
+
   /* Directional scrim for the hero. Deep-ocean blue at the photograph's own
      cobalt hue, not neutral black — so it reads as the water getting deeper
      toward the edge rather than as a grey wash laid over a picture.
      White text on it measures 18.7:1. */
   --color-hero-scrim: oklch(18% 0.055 245); /* #001328 */
+
+  /* ---- Workspace material ----------------------------------------------
+     The authenticated shell is not a page on a background; it is a set of
+     surfaces suspended in water. Four materials, and they DESCEND rather than
+     rise — the same inversion §03 uses on the landing page, where `abyss` is
+     darker than the section around it so the product window reads as inset.
+
+       environment  the photograph, under a scrim
+       glass        the workspace shell, the ONE surface that lifts (used /62)
+       glass-deep   the focal module, pushed furthest in (used /88)
+       inset        `abyss` at low alpha over glass, for sub-modules
+
+     Every alpha here was chosen against the composite over the brightest pixel
+     of public/workspace/channel-*.webp, not by eye. Measured on the shell:
+     `on-ink` 12.68:1 · `on-ink-muted` 5.98:1 · champagne 8.30:1 ·
+     `bahama-turquoise` 6.85:1.
+
+     `bahama-teal` measures 2.34:1 here and MUST NOT be used on these surfaces —
+     it is the light-canvas turquoise. On glass, a completion marker is a
+     turquoise fill carrying an `abyss` glyph (9.91:1); a white glyph on
+     turquoise is 2.05:1. */
+  --color-glass: oklch(24% 0.022 246);
+  --color-glass-deep: oklch(13% 0.018 248);
+
+  /* `on-ink-subtle` (60.5%) measures 3.63:1 on the shell — it clears ink but
+     not glass. Same role, four points lighter, 4.69:1. */
+  --color-on-glass-subtle: oklch(67% 0.012 250);
 
   /* ---- Trust Layer palette — PRESERVED EXACTLY -------------------------
      Trust Layer & Evidence Framework v1.0. These four values are specified,
@@ -206,6 +245,13 @@
   --shadow-sm: 0 1px 2px 0 oklch(20% 0.01 65 / 0.04), 0 1px 3px 0 oklch(20% 0.01 65 / 0.05);
   --shadow-md: 0 2px 4px -1px oklch(20% 0.01 65 / 0.05), 0 4px 12px -2px oklch(20% 0.01 65 / 0.06);
   --shadow-lg: 0 4px 8px -2px oklch(20% 0.01 65 / 0.06), 0 12px 28px -4px oklch(20% 0.01 65 / 0.08);
+
+  /* Depth in water. An inset top lip so the surface catches light from above,
+     and a wide, very soft drop so it sits *in* the environment rather than on
+     it. Deliberately not the light-canvas shadow scale: on a dark ground a
+     tight shadow reads as a border artefact. */
+  --shadow-glass:
+    inset 0 1px 0 0 oklch(100% 0 0 / 0.07), 0 18px 44px -22px oklch(4% 0.02 248 / 0.85);
 }
 
 @layer base {
@@ -334,6 +380,69 @@
   --color-brand: var(--color-on-ink);
   --color-brand-foreground: var(--color-ink);
   --color-brand-hover: var(--color-bahama-turquoise);
+}
+
+/* ---- The workspace environment ------------------------------------------
+   Second use of the token-remapping technique described above, and the one it
+   was worth generalising for: the authenticated shell renders the SAME
+   `Button`, `Badge` and focus styles as the light routes, on water.
+
+   Without this, two things break silently. `--color-brand` is 43% lightness —
+   1.4:1 on glass — so every `:focus-visible` outline in the shell would be
+   invisible, which is an accessibility failure, not a cosmetic one. And
+   `--color-foreground-subtle` is tuned for canvas.
+
+   Scoped to the header, the rail and the dashboard rather than the layout
+   root, because `WorkspaceCanvas` routes are still light and must keep the
+   global tokens exactly as they are. */
+.workspace-env {
+  --color-foreground: var(--color-on-ink);
+  --color-foreground-muted: var(--color-on-ink-muted);
+  --color-foreground-subtle: var(--color-on-glass-subtle);
+
+  /* These three are CONTROL boundaries, not hairlines. A control's border has
+     to clear 3:1 against whatever is behind it (SC 1.4.11), and the worst case
+     here is the bare environment, where white/44 measures 3.42:1. Decorative
+     rules are written as explicit `white/8`–`white/12` at the point of use, so
+     raising these does not thicken the composition. */
+  --color-border: oklch(100% 0 0 / 0.44);
+  --color-border-strong: oklch(100% 0 0 / 0.5);
+  --color-border-control: oklch(100% 0 0 / 0.5);
+
+  /* `surface` is what `Input`, `Select` and `Textarea` fill themselves with.
+     Pointing it at the deep glass turns every form control in the workspace
+     into a writing surface without forking a single primitive — the control
+     recedes into the panel instead of sitting on it as a white box. Measured:
+     `on-ink` 17.41:1, `on-glass-subtle` (the placeholder colour) 6.45:1. */
+  --color-surface: oklch(13% 0.018 248 / 0.86);
+  --color-surface-muted: oklch(100% 0 0 / 0.08);
+  --color-surface-sunken: var(--color-abyss);
+
+  /* Semantics, lifted for a dark ground. The light-canvas values are pastel
+     fills with dark text — a bright chip floating in the abyss, and the text
+     colours themselves measure under 2:1 here. Success is turquoise rather
+     than green because the workspace already says "done" in turquoise, and
+     two completion colours would make neither mean anything. */
+  --color-danger: oklch(74% 0.14 25); /* 5.73:1 on the shell */
+  --color-danger-subtle: oklch(45% 0.15 27 / 0.2);
+  --color-danger-border: oklch(60% 0.14 27 / 0.55);
+  --color-success: var(--color-bahama-turquoise);
+  --color-success-subtle: oklch(50% 0.1 200 / 0.18);
+  --color-success-border: oklch(60% 0.1 200 / 0.5);
+  --color-warning: oklch(80% 0.11 80);
+  --color-warning-subtle: oklch(55% 0.1 80 / 0.18);
+  --color-warning-border: oklch(65% 0.1 80 / 0.5);
+  --color-info: oklch(76% 0.06 240);
+  --color-info-subtle: oklch(100% 0 0 / 0.06);
+  --color-info-border: oklch(100% 0 0 / 0.14);
+
+  /* Turquoise becomes the interactive colour here, as it already is in the
+     rail: 6.85:1 on the shell, and `abyss` on turquoise is 9.91:1. Champagne
+     stays editorial — two clickable-looking accents would make neither mean
+     anything (see the champagne note above). */
+  --color-brand: var(--color-bahama-turquoise);
+  --color-brand-foreground: var(--color-abyss);
+  --color-brand-hover: var(--color-on-ink);
 }
 
 /* ---- §04 depth panels ----------------------------------------------------

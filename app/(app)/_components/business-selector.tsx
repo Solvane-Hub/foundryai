@@ -5,7 +5,7 @@ import type { BusinessSummary } from '@/types/business';
 import { selectBusinessAction } from '../actions';
 
 /**
- * Switches the active business.
+ * Switches the active business, on the ink header.
  *
  * A form submit rather than client-side state: the selection lives in a cookie
  * read by Server Components, so the server must be told. Progressive
@@ -32,10 +32,10 @@ export function BusinessSelector({
         name="businessId"
         defaultValue={currentId}
         onChange={() => formRef.current?.requestSubmit()}
-        className="text-foreground hover:bg-surface-muted h-8 max-w-[15rem] cursor-pointer appearance-none rounded-md bg-transparent pr-7 pl-2.5 text-sm font-medium transition-colors outline-none"
+        className="text-on-ink h-9 max-w-[15rem] cursor-pointer appearance-none rounded-lg bg-transparent pr-7 pl-2.5 text-sm font-medium transition-colors duration-150 outline-none hover:bg-white/8"
       >
         {businesses.map((b) => (
-          <option key={b.id} value={b.id}>
+          <option key={b.id} value={b.id} className="bg-ink text-on-ink">
             {b.name}
           </option>
         ))}
@@ -43,7 +43,7 @@ export function BusinessSelector({
       <svg
         aria-hidden="true"
         viewBox="0 0 16 16"
-        className="text-foreground-subtle pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2"
+        className="text-on-glass-subtle pointer-events-none absolute top-1/2 right-2 size-3.5 -translate-y-1/2"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.75"
@@ -53,7 +53,7 @@ export function BusinessSelector({
         <path d="m4 6 4 4 4-4" />
       </svg>
       <noscript>
-        <button type="submit" className="ml-2 text-sm underline">
+        <button type="submit" className="text-on-ink ml-2 text-sm underline">
           Switch
         </button>
       </noscript>

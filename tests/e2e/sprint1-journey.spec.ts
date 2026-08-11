@@ -60,7 +60,12 @@ test.describe('Sprint 1 — full founder journey', () => {
     await page.getByLabel(/How many people/).fill('3');
     await page.getByRole('button', { name: 'Save and continue' }).click();
 
-    // Funding is optional — leaving it blank must be accepted.
+    // Funding is optional, but "I don't know yet" must be SAID rather than
+    // inferred from a blank box — a silent skip was indistinguishable from
+    // never having been asked (ADR-0020).
+    await page.getByRole('button', { name: 'Save and continue' }).click();
+    await expect(page.getByText(/Enter an amount, or tick/)).toBeVisible();
+    await page.getByRole('checkbox', { name: /I don.t know yet/ }).check();
     await page.getByRole('button', { name: 'Save and continue' }).click();
 
     await page.getByLabel(/What do you want to achieve/).fill('Open a second location in a year.');

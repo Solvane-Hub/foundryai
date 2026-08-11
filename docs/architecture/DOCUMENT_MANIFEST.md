@@ -2,7 +2,7 @@
 
 **Purpose:** the single register of every canonical architecture document, where it lives, and what it depends on.
 **Owner:** Jamil Nash (Co-Founder & CEO) · **Maintained by:** Lead Software Engineer
-**Last updated:** 2026-08-08 — four previously unregistered documents retired (D1–D5); Knowledge Engineering series **7 of 7 registered and mirrored**; ✅ **zero unresolved conflicts** (C1–C3, R1–R3, A1–A12 all resolved; ADR-0015 unchanged throughout). Previously: 2026-08-07 — **AI Architecture series complete (15/15)**; ADRs 0015–0019 ratified/accepted
+**Last updated:** 2026-08-09 — **ADR-0020** accepted (one business profile; intake progress reads knowledge, not the guided-flow cursor; Nova extension point documented, Nova not implemented). Previously: 2026-08-08 — four previously unregistered documents retired (D1–D5); Knowledge Engineering series **7 of 7 registered and mirrored**; ✅ **zero unresolved conflicts** (C1–C3, R1–R3, A1–A12 all resolved; ADR-0015 unchanged throughout). Previously: 2026-08-07 — **AI Architecture series complete (15/15)**; ADRs 0015–0019 ratified/accepted
 
 > **Rule:** every architecture document must appear here. A document that is not in this manifest is not canonical. Update this file in the same commit as the document it describes.
 
@@ -148,7 +148,7 @@ or evaluation objectives. ADR-0018 remains the sole owner of release gates.
 
 Each retired document carried its own decision series outside `docs/decisions/`. **All 24 are
 retired as a parallel decision register** and preserved for history only. **None was promoted.**
-Binding decisions live only in `docs/decisions/` as ADR-0001 … ADR-0019.
+Binding decisions live only in `docs/decisions/` as ADR-0001 … ADR-0020.
 
 | Series           | IDs | Source document                  | Canonical equivalent, where one exists                                                                                                                                                                                 |
 | ---------------- | --- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -280,27 +280,28 @@ Trust Layer §8 · `schema-future-phases.sql`.
 
 `docs/decisions/ADR-0001 … ADR-0014`. Drive copy: `03 Architecture/2026-08-07_ADR_Register_0001-0013.md` (⚠️ predates ADR-0014).
 
-| ADR      | Decision                                                                                                                                    |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0001     | Repository structure & enforced layer boundaries                                                                                            |
-| 0002     | TypeScript strictness                                                                                                                       |
-| 0003     | Server Actions default, REST by exception                                                                                                   |
-| 0004     | Testing strategy                                                                                                                            |
-| 0005     | Zod as the single validation layer                                                                                                          |
-| 0006     | Tenancy — user-owned, multi-business                                                                                                        |
-| 0007     | Business lifecycle states                                                                                                                   |
-| 0008     | Primary key strategy                                                                                                                        |
-| 0009     | RLS policy pattern                                                                                                                          |
-| 0010     | `auth.users` owns identity                                                                                                                  |
-| 0011     | Controlled denormalization for RLS                                                                                                          |
-| 0012     | Audit write path & fail-open policy                                                                                                         |
-| 0013     | Password policy                                                                                                                             |
-| 0014     | Structured logging & correlation IDs                                                                                                        |
-| **0015** | **Unified trust and confidence model** — ✅ ratified. Four dimensions; VERIFIED requires Authority ≥ 4                                      |
-| **0016** | **Long-running AI workflow execution** — ✅ accepted. Persisted workflow runs; one step per invocation. Foundation for all AI orchestration |
-| **0017** | Shared agent output contract — envelope, evidence binding, idempotency, mandatory `unresolved[]`                                            |
-| **0018** | Evaluation gates & release criteria — hard gates; coverage recall ≥ 95% is also the TRL 3 gate                                              |
-| **0019** | Model provider abstraction & data residency — capability tiers; failover off by default                                                     |
+| ADR      | Decision                                                                                                                                                                                                    |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0001     | Repository structure & enforced layer boundaries                                                                                                                                                            |
+| 0002     | TypeScript strictness                                                                                                                                                                                       |
+| 0003     | Server Actions default, REST by exception                                                                                                                                                                   |
+| 0004     | Testing strategy                                                                                                                                                                                            |
+| 0005     | Zod as the single validation layer                                                                                                                                                                          |
+| 0006     | Tenancy — user-owned, multi-business                                                                                                                                                                        |
+| 0007     | Business lifecycle states                                                                                                                                                                                   |
+| 0008     | Primary key strategy                                                                                                                                                                                        |
+| 0009     | RLS policy pattern                                                                                                                                                                                          |
+| 0010     | `auth.users` owns identity                                                                                                                                                                                  |
+| 0011     | Controlled denormalization for RLS                                                                                                                                                                          |
+| 0012     | Audit write path & fail-open policy                                                                                                                                                                         |
+| 0013     | Password policy                                                                                                                                                                                             |
+| 0014     | Structured logging & correlation IDs                                                                                                                                                                        |
+| **0015** | **Unified trust and confidence model** — ✅ ratified. Four dimensions; VERIFIED requires Authority ≥ 4                                                                                                      |
+| **0016** | **Long-running AI workflow execution** — ✅ accepted. Persisted workflow runs; one step per invocation. Foundation for all AI orchestration                                                                 |
+| **0017** | Shared agent output contract — envelope, evidence binding, idempotency, mandatory `unresolved[]`                                                                                                            |
+| **0018** | Evaluation gates & release criteria — hard gates; coverage recall ≥ 95% is also the TRL 3 gate                                                                                                              |
+| **0019** | Model provider abstraction & data residency — capability tiers; failover off by default                                                                                                                     |
+| **0020** | **One business profile; intake measures knowledge, not visitation** — ✅ accepted. Nova writes the same profile through the Intake service; provenance goes in the existing `responses` jsonb; no migration |
 
 ## Evidence
 

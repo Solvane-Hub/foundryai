@@ -62,14 +62,63 @@ export const stepTeamSchema = z.object({
     .max(1_000_000, 'That seems too high.'),
 });
 
-export const stepFundingSchema = z.object({
-  // Optional: many founders genuinely do not know yet, and forcing a number
-  // would produce fabricated data that the Funding Agent would later treat as real.
-  fundingAmount: z
-    .union([z.literal(''), z.coerce.number().min(0, 'This cannot be negative.').max(9_999_999_999)])
-    .optional()
-    .transform((v) => (v === '' || v === undefined ? undefined : Number(v))),
+/**
+ * Funding — a figure, or an explicit "I don't know yet".
+ *
+ * Many founders genuinely do not know, and forcing a number would produce
+ * fabricated data the Funding Agent would later treat as real. But a silently
+ * blank submission is indistinguishable from never having been asked, which is
+ * the ambiguity ADR-0020 flagged: the profile could not tell "declined" from
+ * "not reached", so completeness had to fall back on the guided-flow cursor.
+ *
+ * So one of the two must be given. "I don't know yet" is a first-class answer
+ * and is recorded as one — see `responses.knowledge.funding.declined`.
+ */
+export const stepFundingSchema = z
+  .object({
+    fundingAmount: z
+      .union([
+        z.literal(''),
+        z.coerce.number().min(0, 'This cannot be negative.').max(9_999_999_999),
+      ])
+      .optional()
+      .transform((v) => (v === '' || v === undefined ? undefined : Number(v))),
+    // An unchecked checkbox is absent from the form data entirely.
+    fundingUnknown: z
+      .unknown()
+      .optional()
+      .transform((v) => v === 'on' || v === 'true' || v === true),
+  })
+  .transform(({ fundingAmount, fundingUnknown }) => ({
+    // The two are the same answer and cannot both hold. Ticking the box wins,
+    // so a stale number left in the input cannot be stored alongside it.
+    fundingAmount: fundingUnknown ? undefined : fundingAmount,
+    fundingUnknown,
+  }))
+  .refine((v) => v.fundingUnknown || v.fundingAmount !== undefined, {
+    message: 'Enter an amount, or tick “I don’t know yet”.',
+    path: ['fundingAmount'],
+  });
+
+/**
+ * The shape of `business_profiles.responses` (ADR-0020).
+ *
+ * Provenance and answer metadata — never a second copy of a value. Parsed
+ * defensively because this is untrusted jsonb: a malformed object must degrade
+ * to "nothing recorded", never break a page render.
+ *
+ * `declined` is the only key written today. Nova will add `source`,
+ * `confidence` and `confirmed_at` alongside it.
+ */
+export const knowledgeRecordSchema = z.object({
+  knowledge: z
+    .object({
+      funding: z.object({ declined: z.boolean().optional() }).optional(),
+    })
+    .optional(),
 });
+
+export type KnowledgeRecord = z.infer<typeof knowledgeRecordSchema>;
 
 export const stepGoalsSchema = z.object({
   founderGoals: z

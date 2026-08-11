@@ -74,11 +74,25 @@ describe('intake step validation', () => {
     expect(stepTeamSchema.safeParse({ employeeCount: '2.5' }).success).toBe(false);
   });
 
-  it('treats funding as genuinely optional', () => {
-    // "I don't know" must be representable. Forcing a number would fabricate
-    // data the Funding Agent would later treat as real.
-    expect(stepFundingSchema.parse({ fundingAmount: '' }).fundingAmount).toBeUndefined();
-    expect(stepFundingSchema.parse({}).fundingAmount).toBeUndefined();
+  it('makes "I don\u2019t know" representable, but requires it to be said', () => {
+    // Forcing a number would fabricate data the Funding Agent would later
+    // treat as real. But a silently blank submission was indistinguishable
+    // from never having been asked, which is the ambiguity ADR-0020 closed:
+    // one of the two answers must be given.
+    const declined = stepFundingSchema.parse({ fundingAmount: '', fundingUnknown: 'on' });
+    expect(declined.fundingAmount).toBeUndefined();
+    expect(declined.fundingUnknown).toBe(true);
+
+    expect(stepFundingSchema.safeParse({ fundingAmount: '' }).success).toBe(false);
+    expect(stepFundingSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('lets the decline win over a figure left in the input', () => {
+    // The two are the same answer; storing both would put a number in the
+    // column beside a record saying the founder has none.
+    const r = stepFundingSchema.parse({ fundingAmount: '50000', fundingUnknown: 'on' });
+    expect(r.fundingAmount).toBeUndefined();
+    expect(r.fundingUnknown).toBe(true);
   });
 
   it('accepts a funding figure', () => {
@@ -97,19 +111,30 @@ describe('intake step validation', () => {
   });
 });
 
-function profile(step: number, completedAt: string | null = null): BusinessProfile {
+/**
+ * A profile holding `answeredSlots` of the five facts.
+ *
+ * Progress is read from the VALUES now, not from `last_completed_step` — see
+ * services/intake/knowledge.ts. A fixture that sets only the cursor no longer
+ * describes an answered intake, which is the point of the change.
+ */
+function profile(
+  answeredSlots: number,
+  completedAt: string | null = null,
+  cursor = answeredSlots,
+): BusinessProfile {
   return {
     id: 'p1',
     business_id: 'b1',
-    description: null,
-    founder_goals: null,
-    location: null,
-    business_stage: null,
-    employee_count: null,
-    funding_requirement_amount: null,
-    funding_requirement_currency: null,
+    description: answeredSlots >= 1 ? 'A seafood takeaway in Nassau.' : null,
+    business_stage: answeredSlots >= 2 ? 'idea' : null,
+    location: answeredSlots >= 2 ? 'Nassau' : null,
+    employee_count: answeredSlots >= 3 ? 3 : null,
+    funding_requirement_amount: answeredSlots >= 4 ? 50000 : null,
+    funding_requirement_currency: answeredSlots >= 4 ? 'BSD' : null,
+    founder_goals: answeredSlots >= 5 ? 'Open a second location.' : null,
     responses: {},
-    last_completed_step: step,
+    last_completed_step: cursor,
     completed_at: completedAt,
     created_at: '2026-08-07T00:00:00Z',
     updated_at: '2026-08-07T00:00:00Z',
@@ -125,8 +150,16 @@ describe('intakeProgress', () => {
     expect(intakeProgress(profile(TOTAL_INTAKE_STEPS)).percent).toBe(100);
   });
 
-  it('never exceeds 100% if the stored step is somehow larger', () => {
-    expect(intakeProgress(profile(99)).percent).toBe(100);
+  it('never exceeds 100% if the stored cursor is somehow larger', () => {
+    expect(intakeProgress(profile(5, null, 99)).percent).toBe(100);
+  });
+
+  it('measures what is known, not how far the founder walked', () => {
+    // Cursor at the end, nothing actually stored: the old reading said 100%.
+    // Funding does not count either — walking past it is not a decline.
+    expect(intakeProgress(profile(0, null, 5)).percent).toBe(0);
+    // Facts stored with the cursor at zero — the shape Nova will produce.
+    expect(intakeProgress(profile(3, null, 0)).completed).toBe(3);
   });
 
   it('handles a missing profile', () => {

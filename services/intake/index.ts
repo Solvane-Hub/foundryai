@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database';
+import type { Database, Json } from '@/types/database';
 import type { BusinessProfile } from '@/types/business';
 import { AppError, newCorrelationId } from '@/lib/errors';
 import { recordAuditEvent } from '@/services/audit';
@@ -7,8 +7,31 @@ import { findProfileByBusinessId, insertProfile, updateProfile } from '@/lib/db/
 import { findBusinessById, updateBusiness } from '@/lib/db/businesses';
 import type { IntakePatch } from '@/types/business';
 import { assertTransition } from '@/services/business';
-import { TOTAL_INTAKE_STEPS } from '@/lib/validation/intake';
+import { knowledgeCompleteness } from './knowledge';
 import type { RequestContext } from '@/services/auth';
+
+/** `responses` is jsonb; anything non-object in there is not worth preserving. */
+function isPlainObject(value: unknown): value is Record<string, Json> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The knowledge model is part of this service's public surface — callers ask
+ * the Intake service what FoundryAI knows, never the database directly.
+ */
+export {
+  INTAKE_SLOTS,
+  hasDeclinedFunding,
+  isSlotKnownForStep,
+  knowledgeCompleteness,
+  readKnowledge,
+  readKnowledgeRecord,
+  type IntakeSlot,
+  type IntakeSlotId,
+  type KnowledgeSource,
+  type KnowledgeState,
+  type SlotKnowledge,
+} from './knowledge';
 
 /**
  * Founder Intake Application Service.
@@ -86,6 +109,16 @@ export async function saveStep(
   step: number,
   patch: IntakePatch,
   ctx: RequestContext = {},
+  /**
+   * Step 4 only. `true` records that the founder was asked for a figure and
+   * said they do not know one yet; `false` clears any previous decline.
+   * `undefined` leaves the record alone.
+   *
+   * A separate argument rather than a field on `patch` because `patch` is a
+   * map of columns, and this is answer metadata living in `responses` — the
+   * caller must not have to know that layout (ADR-0020).
+   */
+  fundingDeclined?: boolean,
 ): Promise<BusinessProfile> {
   const correlationId = ctx.correlationId ?? newCorrelationId();
 
@@ -117,6 +150,26 @@ export async function saveStep(
         .maybeSingle();
       resolved.funding_requirement_currency = country?.currency_code ?? null;
     }
+  }
+
+  // Answer metadata, merged rather than replaced: `responses` will accumulate
+  // provenance for every slot once Nova writes to it, and a step save must
+  // never clear what another writer recorded (ADR-0020).
+  if (fundingDeclined !== undefined) {
+    const existingResponses = isPlainObject(profile.responses) ? profile.responses : {};
+    const existingKnowledge = isPlainObject(existingResponses.knowledge)
+      ? existingResponses.knowledge
+      : {};
+    const existingFunding = isPlainObject(existingKnowledge.funding)
+      ? existingKnowledge.funding
+      : {};
+    resolved.responses = {
+      ...existingResponses,
+      knowledge: {
+        ...existingKnowledge,
+        funding: { ...existingFunding, declined: fundingDeclined },
+      },
+    };
   }
 
   const { data, error } = await updateProfile(db, businessId, {
@@ -166,11 +219,16 @@ export async function completeIntake(
     });
   }
 
-  if (profile.last_completed_step < TOTAL_INTAKE_STEPS) {
+  // Gated on knowledge, not on the cursor. A founder whose profile is complete
+  // must be able to finish, however the facts were established — otherwise a
+  // Nova-populated profile would be permanently unfinishable because nobody
+  // walked the five screens.
+  const completeness = knowledgeCompleteness(profile);
+  if (!completeness.isComplete) {
     throw new AppError({
       code: 'VALIDATION_FAILED',
       humanMessage: 'Please finish the remaining questions first.',
-      developerMessage: `last_completed_step=${profile.last_completed_step} of ${TOTAL_INTAKE_STEPS}`,
+      developerMessage: `knowledge ${completeness.known} of ${completeness.total}`,
       correlationId,
     });
   }
@@ -200,17 +258,30 @@ export async function getIntakeProfile(
   return findProfileByBusinessId(db, businessId);
 }
 
+/**
+ * Intake progress, measured as knowledge rather than as page visitation.
+ *
+ * `completed` counts the slots the profile actually holds — see
+ * `./knowledge`. It used to count `last_completed_step`, which is a cursor
+ * through the five screens; that number is identical today, because those
+ * screens are the only writer, and stops being identical the moment Nova can
+ * establish a fact without the founder opening the page.
+ *
+ * `isComplete` still means "the founder finished intake" (`completed_at`), not
+ * "every slot is known" — those are different questions and callers depend on
+ * the first. `knowledgeCompleteness().isComplete` answers the second.
+ */
 export function intakeProgress(profile: BusinessProfile | null): {
   completed: number;
   total: number;
   percent: number;
   isComplete: boolean;
 } {
-  const completed = Math.min(profile?.last_completed_step ?? 0, TOTAL_INTAKE_STEPS);
+  const { known, total } = knowledgeCompleteness(profile);
   return {
-    completed,
-    total: TOTAL_INTAKE_STEPS,
-    percent: Math.round((completed / TOTAL_INTAKE_STEPS) * 100),
+    completed: known,
+    total,
+    percent: Math.round((known / total) * 100),
     isComplete: Boolean(profile?.completed_at),
   };
 }

@@ -111,6 +111,78 @@ export type Database = {
           },
         ];
       };
+      business_regulatory_requirements: {
+        Row: {
+          active_at: string | null;
+          approved_at: string | null;
+          business_id: string;
+          created_at: string;
+          expired_at: string | null;
+          id: string;
+          last_evaluated_at: string | null;
+          missing_information: Json;
+          reason: string | null;
+          renewal_due_at: string | null;
+          required_documents: Json;
+          requirement_id: string;
+          started_at: string | null;
+          state: string;
+          submitted_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          active_at?: string | null;
+          approved_at?: string | null;
+          business_id: string;
+          created_at?: string;
+          expired_at?: string | null;
+          id?: string;
+          last_evaluated_at?: string | null;
+          missing_information?: Json;
+          reason?: string | null;
+          renewal_due_at?: string | null;
+          required_documents?: Json;
+          requirement_id: string;
+          started_at?: string | null;
+          state?: string;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          active_at?: string | null;
+          approved_at?: string | null;
+          business_id?: string;
+          created_at?: string;
+          expired_at?: string | null;
+          id?: string;
+          last_evaluated_at?: string | null;
+          missing_information?: Json;
+          reason?: string | null;
+          renewal_due_at?: string | null;
+          required_documents?: Json;
+          requirement_id?: string;
+          started_at?: string | null;
+          state?: string;
+          submitted_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'business_regulatory_requirements_business_id_fkey';
+            columns: ['business_id'];
+            isOneToOne: false;
+            referencedRelation: 'businesses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'business_regulatory_requirements_requirement_id_fkey';
+            columns: ['requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       businesses: {
         Row: {
           archived_at: string | null;
@@ -576,6 +648,384 @@ export type Database = {
           created_at?: string;
           full_name?: string | null;
           id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      regulatory_actions: {
+        Row: {
+          action_type: string;
+          agency_name: string | null;
+          created_at: string;
+          description: string;
+          id: string;
+          name: string;
+          official_url: string | null;
+          pathway_step_id: string | null;
+          requirement_id: string;
+          requires_human_approval: boolean;
+          status: string;
+          system_name: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          action_type: string;
+          agency_name?: string | null;
+          created_at?: string;
+          description: string;
+          id?: string;
+          name: string;
+          official_url?: string | null;
+          pathway_step_id?: string | null;
+          requirement_id: string;
+          requires_human_approval?: boolean;
+          status?: string;
+          system_name?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          action_type?: string;
+          agency_name?: string | null;
+          created_at?: string;
+          description?: string;
+          id?: string;
+          name?: string;
+          official_url?: string | null;
+          pathway_step_id?: string | null;
+          requirement_id?: string;
+          requires_human_approval?: boolean;
+          status?: string;
+          system_name?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'regulatory_actions_pathway_step_id_fkey';
+            columns: ['pathway_step_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_pathway_steps';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'regulatory_actions_requirement_id_fkey';
+            columns: ['requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      regulatory_applicability_rules: {
+        Row: {
+          created_at: string;
+          expected_value: Json;
+          explanation: string | null;
+          field_path: string;
+          id: string;
+          operator: string;
+          requirement_id: string;
+          rule_type: string;
+        };
+        Insert: {
+          created_at?: string;
+          expected_value: Json;
+          explanation?: string | null;
+          field_path: string;
+          id?: string;
+          operator: string;
+          requirement_id: string;
+          rule_type: string;
+        };
+        Update: {
+          created_at?: string;
+          expected_value?: Json;
+          explanation?: string | null;
+          field_path?: string;
+          id?: string;
+          operator?: string;
+          requirement_id?: string;
+          rule_type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'regulatory_applicability_rules_requirement_id_fkey';
+            columns: ['requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      regulatory_pathway_steps: {
+        Row: {
+          created_at: string;
+          description: string;
+          id: string;
+          name: string;
+          pathway_id: string;
+          requirement_id: string | null;
+          status: string;
+          step_number: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          id?: string;
+          name: string;
+          pathway_id: string;
+          requirement_id?: string | null;
+          status?: string;
+          step_number: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          id?: string;
+          name?: string;
+          pathway_id?: string;
+          requirement_id?: string | null;
+          status?: string;
+          step_number?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'regulatory_pathway_steps_pathway_id_fkey';
+            columns: ['pathway_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_pathways';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'regulatory_pathway_steps_requirement_id_fkey';
+            columns: ['requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      regulatory_pathways: {
+        Row: {
+          created_at: string;
+          description: string;
+          id: string;
+          jurisdiction: string;
+          name: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          id?: string;
+          jurisdiction: string;
+          name: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          id?: string;
+          jurisdiction?: string;
+          name?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      regulatory_requirement_dependencies: {
+        Row: {
+          created_at: string;
+          depends_on_requirement_id: string;
+          description: string | null;
+          id: string;
+          relationship_type: string;
+          requirement_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          depends_on_requirement_id: string;
+          description?: string | null;
+          id?: string;
+          relationship_type: string;
+          requirement_id: string;
+        };
+        Update: {
+          created_at?: string;
+          depends_on_requirement_id?: string;
+          description?: string | null;
+          id?: string;
+          relationship_type?: string;
+          requirement_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'regulatory_requirement_dependenc_depends_on_requirement_id_fkey';
+            columns: ['depends_on_requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'regulatory_requirement_dependencies_requirement_id_fkey';
+            columns: ['requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      regulatory_requirement_evidence: {
+        Row: {
+          created_at: string;
+          evidence_role: string;
+          id: string;
+          knowledge_chunk_id: string;
+          knowledge_pack_id: string;
+          knowledge_source_id: string;
+          requirement_id: string;
+          source_locator: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          evidence_role?: string;
+          id?: string;
+          knowledge_chunk_id: string;
+          knowledge_pack_id: string;
+          knowledge_source_id: string;
+          requirement_id: string;
+          source_locator?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          evidence_role?: string;
+          id?: string;
+          knowledge_chunk_id?: string;
+          knowledge_pack_id?: string;
+          knowledge_source_id?: string;
+          requirement_id?: string;
+          source_locator?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'regulatory_requirement_evidence_knowledge_chunk_id_fkey';
+            columns: ['knowledge_chunk_id'];
+            isOneToOne: false;
+            referencedRelation: 'knowledge_chunks';
+            referencedColumns: ['chunk_id'];
+          },
+          {
+            foreignKeyName: 'regulatory_requirement_evidence_knowledge_pack_id_fkey';
+            columns: ['knowledge_pack_id'];
+            isOneToOne: false;
+            referencedRelation: 'knowledge_packs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'regulatory_requirement_evidence_knowledge_source_id_fkey';
+            columns: ['knowledge_source_id'];
+            isOneToOne: false;
+            referencedRelation: 'knowledge_sources';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'regulatory_requirement_evidence_requirement_id_fkey';
+            columns: ['requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      regulatory_requirement_outputs: {
+        Row: {
+          business_knowledge_field: string | null;
+          created_at: string;
+          description: string;
+          id: string;
+          name: string;
+          output_type: string;
+          required_for_downstream: boolean;
+          requirement_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          business_knowledge_field?: string | null;
+          created_at?: string;
+          description: string;
+          id?: string;
+          name: string;
+          output_type: string;
+          required_for_downstream?: boolean;
+          requirement_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          business_knowledge_field?: string | null;
+          created_at?: string;
+          description?: string;
+          id?: string;
+          name?: string;
+          output_type?: string;
+          required_for_downstream?: boolean;
+          requirement_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'regulatory_requirement_outputs_requirement_id_fkey';
+            columns: ['requirement_id'];
+            isOneToOne: false;
+            referencedRelation: 'regulatory_requirements';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      regulatory_requirements: {
+        Row: {
+          created_at: string;
+          description: string;
+          effective_from: string | null;
+          effective_until: string | null;
+          id: string;
+          jurisdiction: string;
+          regulatory_domain: string;
+          requirement_type: string;
+          source_locator: string | null;
+          status: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          effective_from?: string | null;
+          effective_until?: string | null;
+          id?: string;
+          jurisdiction: string;
+          regulatory_domain: string;
+          requirement_type: string;
+          source_locator?: string | null;
+          status?: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          effective_from?: string | null;
+          effective_until?: string | null;
+          id?: string;
+          jurisdiction?: string;
+          regulatory_domain?: string;
+          requirement_type?: string;
+          source_locator?: string | null;
+          status?: string;
+          title?: string;
           updated_at?: string;
         };
         Relationships: [];

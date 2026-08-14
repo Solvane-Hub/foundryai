@@ -185,7 +185,7 @@ export default function HomePage() {
             <Territory />
           </section>
 
-..iu          <Closing />
+<Closing />
         </main>
       </div>
 

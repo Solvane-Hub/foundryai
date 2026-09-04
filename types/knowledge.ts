@@ -30,6 +30,20 @@ export type KnowledgeSourceType =
 /** ADR-0015 Source Authority. A property of the DOCUMENT, never the publisher. */
 export type SourceAuthority = 1 | 2 | 3 | 4 | 5;
 
+/**
+ * Whether a chunk states law or edits it.
+ *
+ * An amending Act does not state law. It states edits — "Section 6 of the
+ * principal Act is amended … by the deletion of the words …" — which is a
+ * valid, citable, Authority-5 quotation and a useless answer to a founder.
+ * Substantive chunks therefore rank ahead of amending instructions.
+ *
+ * `unknown` exists only for chunks written before this classification existed.
+ * It ranks last, may not lead an answer, and cannot be written by the
+ * application: `draftChunkSchema` accepts the other two values only.
+ */
+export type InstrumentRole = 'substantive' | 'amending_instruction' | 'unknown';
+
 export type KnowledgePackStatus =
   'draft' | 'validating' | 'staged' | 'published' | 'superseded' | 'rolled_back';
 
@@ -109,6 +123,15 @@ export interface KnowledgeSource {
   content_media_type: string | null;
   created_at: string;
   updated_at: string;
+
+  /**
+   * Stable key into the Knowledge Pack source manifest.
+   *
+   * The amendment chain resolves through this, never through `source_url`: a
+   * changed government URL must not silently detach a source from its
+   * amendments. Null only for rows written before the join existed.
+   */
+  manifest_id: string | null;
 }
 
 /**
@@ -139,6 +162,20 @@ export interface KnowledgeChunk {
   effective_date: string | null;
   chunk_version: number;
   created_at: string;
+
+  /** Whether this chunk states law or edits it. Drives retrieval ranking. */
+  instrument_role: InstrumentRole;
+  /**
+   * Canonical id of the provision this chunk IS — `'s.56(1)'`, `'sch.2'`.
+   * Null where `section_reference` could not be parsed, which the Assistant
+   * Service reports as unresolved rather than treating as "no amendments".
+   */
+  provision_id: string | null;
+  /**
+   * For an amending instruction: the canonical id of the provision in the
+   * principal instrument that this chunk edits. Null for substantive chunks.
+   */
+  amends_provision: string | null;
 }
 
 /** Field names that must never appear on a chunk. Asserted by tests. */

@@ -5,6 +5,7 @@ import { RouteSummary } from '@/app/(app)/_components/route-summary';
 import { BusinessSnapshot } from '@/app/(app)/_components/business-snapshot';
 import { IntakeDial } from '@/app/(app)/_components/intake-dial';
 import { SurfaceTiles } from '@/app/(app)/_components/surface-tiles';
+import { NAV_GROUPS, NAV_ITEMS } from '@/app/(app)/_components/nav-items';
 import { RoadmapSurface } from '@/components/ui/roadmap-surface';
 import type { Milestone } from '@/services/progress';
 
@@ -184,18 +185,80 @@ describe('BusinessSnapshot', () => {
 });
 
 describe('SurfaceTiles', () => {
+  /**
+   * Derived from `NAV_GROUPS`, so the count is asserted against the navigation
+   * rather than restated. When Nova was promoted to an available route it left
+   * these tiles automatically — and this expression is what makes that a
+   * verified consequence instead of a coincidence.
+   */
+  const unbuilt = NAV_ITEMS.filter((i) => !i.available);
+
   it('presents unbuilt surfaces as unbuilt, with their real prerequisite state', () => {
     render(<SurfaceTiles intakeComplete={false} />);
-    expect(screen.getAllByText('In development')).toHaveLength(5);
-    expect(screen.getAllByText('Needs your completed intake')).toHaveLength(5);
+    expect(screen.getAllByText('In development')).toHaveLength(unbuilt.length);
+    expect(screen.getAllByText('Needs your completed intake')).toHaveLength(unbuilt.length);
     expect(screen.queryByText('Your intake is ready')).toBeNull();
   });
 
   it('reflects a completed intake rather than a hard-coded state', () => {
     render(<SurfaceTiles intakeComplete />);
-    expect(screen.getAllByText('Your intake is ready')).toHaveLength(5);
+    expect(screen.getAllByText('Your intake is ready')).toHaveLength(unbuilt.length);
     // Still not available. A met prerequisite is not a shipped capability.
-    expect(screen.getAllByText('In development')).toHaveLength(5);
+    expect(screen.getAllByText('In development')).toHaveLength(unbuilt.length);
+  });
+
+  it('shows every unbuilt surface and nothing that is built', () => {
+    render(<SurfaceTiles intakeComplete />);
+
+    for (const item of unbuilt) {
+      expect(screen.getByText(item.label), `${item.label} missing from tiles`).toBeTruthy();
+    }
+    for (const item of NAV_ITEMS.filter((i) => i.available)) {
+      expect(
+        screen.queryByText(item.label),
+        `${item.label} is built and must not appear`,
+      ).toBeNull();
+    }
+  });
+
+  it('does not present Nova as a surface in development', () => {
+    // The specific regression this guards: Nova shipped and went on being
+    // rendered as a door with "In development" under it for days.
+    render(<SurfaceTiles intakeComplete />);
+    expect(screen.queryByText('Nova')).toBeNull();
+  });
+});
+
+describe('primary navigation', () => {
+  it('lists Nova as an available route', () => {
+    const nova = NAV_ITEMS.find((i) => i.href === '/assistant');
+
+    expect(nova, 'Nova is missing from the navigation').toBeDefined();
+    expect(nova?.available).toBe(true);
+  });
+
+  it('keeps Nova out of the "Coming soon" group', () => {
+    const comingSoon = NAV_GROUPS.find((g) => g.label === 'Coming soon');
+    expect(comingSoon?.items.some((i) => i.href === '/assistant')).toBe(false);
+  });
+
+  it('places Nova in the primary group, directly after the dashboard', () => {
+    const primary = NAV_GROUPS[0]?.items ?? [];
+    expect(primary[0]?.href).toBe('/dashboard');
+    expect(primary[1]?.href).toBe('/assistant');
+  });
+
+  it('still marks genuinely unbuilt surfaces as unavailable', () => {
+    // Promoting one route must not have promoted the rest.
+    for (const href of ['/timeline', '/compliance', '/funding', '/documents']) {
+      expect(NAV_ITEMS.find((i) => i.href === href)?.available, href).toBe(false);
+    }
+  });
+
+  it('points every navigation entry at a route that exists', () => {
+    for (const item of NAV_ITEMS) {
+      expect(item.href.startsWith('/'), item.href).toBe(true);
+    }
   });
 });
 

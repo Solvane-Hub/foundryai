@@ -53,7 +53,13 @@ export function chunkIdentityString(input: ChunkIdentityInput): string {
   ].join('');
 }
 
-function uuidV5(name: string, namespace: string): string {
+/**
+ * Exported so that other deterministic identities — `claim_id` in the Nova agent
+ * contract — derive from the same implementation rather than a second copy.
+ * Each caller supplies its own namespace, so identities never collide across
+ * kinds even when every input string matches.
+ */
+export function uuidV5(name: string, namespace: string): string {
   const nsBytes = Buffer.from(namespace.replace(/-/g, ''), 'hex');
   const hash = createHash('sha1').update(nsBytes).update(Buffer.from(name, 'utf8')).digest();
   const bytes = Buffer.from(hash.subarray(0, 16));

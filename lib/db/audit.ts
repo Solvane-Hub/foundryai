@@ -21,7 +21,18 @@ export type AuditEvent =
   | 'intake.started'
   | 'intake.step_saved'
   | 'intake.knowledge_applied'
-  | 'intake.completed';
+  | 'intake.completed'
+  /**
+   * Nova. Security Architecture requires AI generation to be recorded.
+   *
+   * ⚠ The metadata on these events carries the SHAPE of a run and nothing else:
+   *   outcome, pack version, counts, correlation id. Never the founder's
+   *   question, never retrieved legal text, never generated content. The
+   *   reproducibility record in `agent_executions` observes the same rule.
+   */
+  | 'nova.answered'
+  | 'nova.rate_limited'
+  | 'nova.failed';
 
 export interface AuditEntry {
   event: AuditEvent;

@@ -1,58 +1,147 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { listBusinesses, resolveCurrentBusiness } from '@/services/business';
+import { getActiveCountries, listBusinesses, resolveCurrentBusiness } from '@/services/business';
 import { getIntakeProfile } from '@/services/intake';
+import { getJurisdictionCapability } from '@/services/knowledge/capability';
 import { CURRENT_BUSINESS_COOKIE } from '@/lib/business-cookie';
+import { cn } from '@/lib/utils/cn';
 import { PageHeader } from '@/components/ui/page-header';
 import { RoadmapSurface, type Prerequisite } from '@/components/ui/roadmap-surface';
+import { NovaConsole } from './_components/nova-console';
 
 export const metadata: Metadata = { title: 'Nova' };
 
+/**
+ * Nova.
+ *
+ * The composer is offered only when a Knowledge Pack is actually published for
+ * this business's jurisdiction. That gate is not decoration:
+ *
+ *   • Inviting a founder to type a regulatory question we already know cannot be
+ *     answered is the "implied capability" failure AI-14 §6 exists to prevent.
+ *   • With no published pack, retrieval returns `no_published_knowledge` and no
+ *     legal text can reach the screen — which is also how the G11 commercial
+ *     reuse gate is honoured structurally rather than by convention.
+ *
+ * When no pack exists the founder sees the roadmap surface, whose prerequisite
+ * states are REAL: `met` is computed from the database, not asserted.
+ */
 export default async function AssistantPage() {
   const db = await createClient();
   const [businesses, store] = await Promise.all([listBusinesses(db), cookies()]);
   const current = resolveCurrentBusiness(businesses, store.get(CURRENT_BUSINESS_COOKIE)?.value);
-  const intake = current ? await getIntakeProfile(db, current.id) : null;
-  const intakeComplete = Boolean(intake?.completed_at);
 
-  const prerequisites: Prerequisite[] = [
+  const [intake, capability, countries] = await Promise.all([
+    current ? getIntakeProfile(db, current.id) : Promise.resolve(null),
+    getJurisdictionCapability(db, current?.country_code),
+    getActiveCountries(db),
+  ]);
+
+  const intakeComplete = Boolean(intake?.completed_at);
+  const knowledgePublished = capability.knowledgePublished;
+  const ready = Boolean(current) && knowledgePublished;
+
+  /**
+   * What Foundry holds for this jurisdiction, in one line.
+   *
+   * ⚠ Every part of this comes from the database — the country name from
+   *   `countries`, the pack version from the published pack, the synthetic flag
+   *   from the jurisdiction's ISO range. Nothing is asserted, and where a pack
+   *   is synthetic the line says so, because a founder reading "published
+   *   sources available" about invented law is the one impression this whole
+   *   labelling apparatus exists to prevent.
+   *
+   * `null` when there is nothing true to say. The landing renders no panel
+   * rather than a placeholder.
+   */
+  const countryName = current
+    ? (countries.find((c) => c.code === current.country_code)?.name ?? current.country_code)
+    : null;
+
+  const knowledgeLine =
+    countryName && capability.knowledgePublished
+      ? capability.syntheticCorpus
+        ? `${countryName} · ${capability.knowledgeVersion} — a SYNTHETIC demonstration corpus. Not real law.`
+        : `${countryName} · ${capability.knowledgeVersion} published. Nova quotes only from these sources.`
+      : null;
+
+  return (
+    /*
+      Nova is the one surface that uses the whole shell width.
+
+      Every other page is a document and is capped at a reading measure. This
+      one is a workspace: the answer and its evidence sit side by side, and
+      capping it at `max-w-4xl` squeezed the context rail until the source
+      titles wrapped after two words. The console re-imposes a reading measure
+      on the parts that are prose — the composer, the landing, the record of
+      work — so nothing here stretches a paragraph across 72rem.
+    */
+    <div
+      className={cn(
+        'workspace-env flex flex-col gap-8 pt-3 sm:pt-6',
+        ready && current ? null : 'max-w-4xl',
+      )}
+    >
+      {!ready ? <PageHeader eyebrow="In development" title="Nova" /> : null}
+
+      {ready && current ? (
+        <NovaConsole businessName={current.name} knowledgeLine={knowledgeLine} />
+      ) : (
+        <RoadmapSurface
+          purpose="Questions about your business answered from the same cited evidence as the rest of the workspace — never from a model’s memory."
+          prerequisites={prerequisitesFor({ knowledgePublished, intakeComplete })}
+          today={
+            intakeComplete
+              ? {
+                  text: 'Your intake is complete, so FoundryAI already holds the profile this surface is built on. The remaining work is ours.',
+                  href: '/dashboard',
+                  label: 'Back to your workspace',
+                }
+              : {
+                  text: 'Completing your intake is the part of this that depends on you. The rest is ours to build.',
+                  href: '/intake',
+                  label: 'Continue intake',
+                }
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Prerequisites, computed rather than asserted.
+ *
+ * The reasoning layer is `met` because it exists and is tested — the extractive
+ * reasoner, its envelope gate and its citation grounding all ship. Saying
+ * otherwise would understate the system as badly as overstating it.
+ */
+function prerequisitesFor({
+  knowledgePublished,
+  intakeComplete,
+}: {
+  knowledgePublished: boolean;
+  intakeComplete: boolean;
+}): Prerequisite[] {
+  return [
     {
-      // No Knowledge Pack has been published. Stating that plainly is the
-      // whole point of this page.
       label: 'A published Knowledge Pack',
       detail:
-        'Validated regulatory sources for your jurisdiction, each one citable. The schema exists; no pack has been published yet.',
-      met: false,
+        'Validated regulatory sources for your jurisdiction, each one citable. The sources are identified and verified; publication is pending a legal review of reuse terms.',
+      met: knowledgePublished,
     },
     {
       label: 'The reasoning layer',
       detail:
-        'The agents that turn retrieved sources into answers, and the trust rules that decide what may be shown.',
-      met: false,
+        'The component that turns retrieved sources into a cited answer, and refuses when the sources do not support one.',
+      met: true,
+    },
+    {
+      label: 'Your business profile',
+      detail:
+        'Nova scopes every search to your jurisdiction and industry, which it reads from your intake.',
+      met: intakeComplete,
     },
   ];
-
-  return (
-    <div className="workspace-env flex max-w-4xl flex-col gap-8 pt-3 sm:pt-6">
-      <PageHeader eyebrow="In development" title="Nova" />
-      <RoadmapSurface
-        purpose="Questions about your business answered from the same cited evidence as the rest of the workspace — never from a model’s memory."
-        prerequisites={prerequisites}
-        today={
-          intakeComplete
-            ? {
-                text: 'Your intake is complete, so FoundryAI already holds the profile this surface will be built on. Nothing further is needed from you here.',
-                href: '/dashboard',
-                label: 'Back to your workspace',
-              }
-            : {
-                text: 'Completing your intake is the part of this that depends on you. The rest is ours to build.',
-                href: '/intake',
-                label: 'Continue intake',
-              }
-        }
-      />
-    </div>
-  );
 }

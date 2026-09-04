@@ -252,6 +252,38 @@
      tight shadow reads as a border artefact. */
   --shadow-glass:
     inset 0 1px 0 0 oklch(100% 0 0 / 0.07), 0 18px 44px -22px oklch(4% 0.02 248 / 0.85);
+
+  /* ---- Motion ----------------------------------------------------------
+     Until now every duration in the product was a literal `duration-150`,
+     which is fine for a hover and wrong for everything else. A state machine
+     needs a scale, and a scale needs names.
+
+     The easings are the load-bearing part. `settle` decelerates hard and is
+     the only curve used when something ARRIVES — a retrieved passage, a
+     converged point, a panel. Things that arrive in this product were found,
+     not generated, and a curve that overshoots would suggest otherwise.
+     `enter` is gentler, for opacity and small offsets. `exit` accelerates
+     away, because leaving should not be as considered as arriving.
+
+     Durations are deliberately short. A regulatory answer is not a reveal to
+     be savoured; motion here exists to show that something changed, and then
+     to get out of the way. */
+  --ease-settle: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-enter: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-exit: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+
+  --duration-instant: 90ms;
+  --duration-quick: 160ms;
+  --duration-settle: 320ms;
+  --duration-considered: 560ms;
+
+  /* One shared clock for every ambient Nova animation.
+     Borrowed from `thinking-orbs`, which runs all instances off a single
+     clock so several indicators on one screen never beat against each other.
+     Here it is a shared PERIOD rather than a shared timer: CSS animations
+     with an identical duration and no delay stay in phase for free, which
+     buys the same property with no JavaScript at all. */
+  --nova-cycle: 3200ms;
 }
 
 @layer base {
@@ -465,4 +497,427 @@
   .depth-panel[data-open='true'] {
     width: calc(100% - 19.5rem);
   }
+}
+
+/* ---- Nova ---------------------------------------------------------------
+   Nova's identity and its state machine.
+
+   ## The mark
+
+   A field of scattered points and one horizontal axis. The points are the
+   fragmented sources a founder would otherwise search by hand; the axis is
+   the ordered answer. Every state is a position along one journey:
+
+       FRAGMENTATION  →  CONVERGENCE  →  CLARITY
+
+   Deliberately NOT a glowing orb. A dotted orb is the house style of every
+   assistant shipped in the last two years, and it says "there is an AI here"
+   rather than "this is what the AI does". The convergence is legible without
+   the word "Nova" beside it, which is the test an identity has to pass.
+
+   Geometry is authored in the component (`components/ui/nova-mark.tsx`) as two
+   coordinate pairs per point — `--sx/--sy` scattered, `--cx/--cy` converged —
+   so this file animates between them without knowing where any point is.
+
+   ## The states
+
+   ⚠ These are SYSTEM states, not thoughts. Each one corresponds to a stage the
+     pipeline genuinely passes through — retrieval, deterministic filtering,
+     extraction, envelope validation. Nothing here exposes or implies private
+     reasoning, and the extractive reasoner has none to expose: it quotes.
+     `aria-label` on the mark states the system status in words; the animation
+     is decorative and marked `aria-hidden`.
+
+   ## Reduced motion
+
+   The base layer already clamps every duration to 0.01ms under
+   `prefers-reduced-motion: reduce`, which resolves each state to its final
+   frame instantly — correct for the eight discrete states. What that rule
+   cannot make safe is a LOOP: a 3.2s cycle compressed to 0.01ms strobes, and
+   strobing is the specific harm the preference exists to prevent. Every
+   looping animation below is therefore gated behind `no-preference` rather
+   than relying on the override, the same way `.hero-rule` already is. */
+
+[data-nova-state] {
+  --nova-point-opacity: 0.75;
+  --nova-axis-opacity: 0.25;
+  --nova-spread: 1;
+}
+
+.nova-point {
+  transform: translate(calc(var(--sx) * 1px), calc(var(--sy) * 1px));
+  opacity: var(--nova-point-opacity);
+  transition:
+    transform var(--duration-considered) var(--ease-settle),
+    opacity var(--duration-settle) var(--ease-enter);
+}
+
+.nova-axis {
+  opacity: var(--nova-axis-opacity);
+  transition: opacity var(--duration-settle) var(--ease-enter);
+}
+
+/* Converged: points sit on the axis, ordered and evenly spaced. Staggering by
+   index makes them arrive in sequence rather than snapping as one block —
+   the same "arriving in stages" idea the receipt printer uses on its feed,
+   applied to a mark rather than to paper. */
+[data-nova-state='composing'] .nova-point,
+[data-nova-state='ready'] .nova-point,
+[data-nova-state='limited'] .nova-point {
+  transform: translate(calc(var(--cx) * 1px), calc(var(--cy) * 1px));
+  transition-delay: calc(var(--i) * 40ms);
+}
+
+[data-nova-state='listening'] {
+  --nova-axis-opacity: 0.6;
+  --nova-point-opacity: 0.85;
+}
+
+[data-nova-state='searching'],
+[data-nova-state='evaluating'] {
+  --nova-axis-opacity: 0.45;
+}
+
+[data-nova-state='composing'] {
+  --nova-axis-opacity: 0.7;
+  --nova-point-opacity: 0.9;
+}
+
+[data-nova-state='ready'] {
+  --nova-axis-opacity: 0.9;
+  --nova-point-opacity: 1;
+}
+
+/* Partial coverage. The points that DID converge are full strength; the two
+   that stand for what was not established stay faint. A gap in the line is
+   the honest picture of a partial answer. */
+[data-nova-state='limited'] {
+  --nova-axis-opacity: 0.7;
+  --nova-point-opacity: 0.95;
+}
+
+[data-nova-state='limited'] .nova-point:nth-child(3n) {
+  opacity: 0.18;
+}
+
+/* Refusal contracts rather than erroring. The points fall back to the
+   scattered field and dim; the axis stays lit, because the system is still
+   there and still working — it simply found nothing that supported an answer.
+   Red would say "something broke". Nothing broke. */
+[data-nova-state='refused'] {
+  --nova-point-opacity: 0.3;
+  --nova-axis-opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Idle: an almost imperceptible breath, so the mark reads as present rather
+     than as a static logo. Amplitude is 3% opacity — visible as life, never
+     as movement competing with the composer beside it. */
+  @keyframes nova-breathe {
+    0%,
+    100% {
+      opacity: var(--nova-point-opacity);
+    }
+    50% {
+      opacity: calc(var(--nova-point-opacity) - 0.03);
+    }
+  }
+
+  [data-nova-state='idle'] .nova-point {
+    animation: nova-breathe var(--nova-cycle) var(--ease-enter) infinite;
+    animation-delay: calc(var(--i) * 90ms);
+  }
+
+  /* Searching: a meridian sweeps the field and each point brightens as it is
+     passed. The stagger IS the scan — there is no separate sweeping element,
+     so the animation cannot fall out of step with the points it is scanning. */
+  @keyframes nova-scan {
+    0%,
+    100% {
+      opacity: 0.28;
+    }
+    18% {
+      opacity: 1;
+    }
+    40% {
+      opacity: 0.28;
+    }
+  }
+
+  [data-nova-state='searching'] .nova-point {
+    animation: nova-scan 1400ms linear infinite;
+    animation-delay: calc(var(--i) * 110ms);
+  }
+
+  /* Evaluating: the sweep has finished and the field is being narrowed.
+     Points hold; a slower pulse says work continues without implying a scan
+     is still running. */
+  @keyframes nova-weigh {
+    0%,
+    100% {
+      opacity: 0.85;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+
+  [data-nova-state='evaluating'] .nova-point:nth-child(2n) {
+    animation: nova-weigh 900ms var(--ease-enter) infinite;
+    animation-delay: calc(var(--i) * 60ms);
+  }
+
+  /* Composing: the axis draws itself as the points land on it. */
+  @keyframes nova-axis-draw {
+    from {
+      transform: scaleX(0.2);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  [data-nova-state='composing'] .nova-axis {
+    transform-origin: center;
+    animation: nova-axis-draw var(--duration-considered) var(--ease-settle) both;
+  }
+}
+
+/* ---- Focus beam ---------------------------------------------------------
+   A single rotating conic gradient behind a masked border, used ONLY on the
+   Nova composer when it holds focus.
+
+   The technique is `border-beam`'s; the package is not, because this is
+   fifteen lines and a dependency is forever. It earns its place on exactly
+   one element: the composer is where a founder hands a question to the
+   system, and the beam marks that boundary as live. Anywhere else it would be
+   decoration, and a second use is the signal that it has become one.
+
+   `:focus-visible` semantics are preserved by the caller — this class is
+   applied alongside the real focus ring, never instead of it. Removing the
+   ring in favour of a decorative beam would fail SC 2.4.7. */
+.nova-beam {
+  position: relative;
+}
+
+.nova-beam::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--beam-angle, 0deg),
+    transparent 0deg,
+    var(--color-bahama-turquoise) 40deg,
+    transparent 110deg,
+    transparent 360deg
+  );
+  /* Mask to the border only, so the gradient never washes the writing area. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--duration-quick) var(--ease-enter);
+  pointer-events: none;
+}
+
+.nova-beam[data-beam='on']::before {
+  opacity: 1;
+}
+
+@property --beam-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes nova-beam-rotate {
+    to {
+      --beam-angle: 360deg;
+    }
+  }
+
+  .nova-beam[data-beam='on']::before {
+    animation: nova-beam-rotate 4s linear infinite;
+  }
+}
+
+/* ---- Staged reveal ------------------------------------------------------
+   Evidence arrives in sequence rather than appearing as a block.
+
+   The idea is from the receipt-printer experiment, and the reason it belongs
+   here is not that it looks nice: a citation IS a record being issued, and
+   watching passages arrive one at a time reinforces that they were RETRIEVED
+   rather than composed. A block fade would say the opposite.
+
+   Index-driven delay, capped so a long answer never makes a founder wait on
+   choreography. Under reduced motion the base rule collapses the duration and
+   every item is simply present. */
+.stage-in {
+  animation: stage-in var(--duration-settle) var(--ease-settle) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 55ms);
+}
+
+@keyframes stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- Nova field ---------------------------------------------------------
+   The constellation, and the claim↔evidence relationship it makes navigable.
+
+   `.nova-field` reuses `.nova-point` and `.nova-axis` from the mark, so the
+   icon and the product-scale surface are literally the same visual language
+   rather than two things that resemble each other. A state change moves both.
+
+   The only addition here is the RELATIONSHIP layer: a node under pointer or
+   keyboard focus, and the sources of the same finding, brighten together. The
+   resting state is everything-equal — an interface that dims itself until you
+   point at something is exhausting to read, and it also hides information from
+   anyone who never hovers. */
+
+.nova-field .nova-point {
+  transition:
+    transform var(--duration-considered) var(--ease-settle),
+    opacity var(--duration-settle) var(--ease-enter),
+    r var(--duration-quick) var(--ease-settle);
+}
+
+/* Related nodes brighten; nothing else dims. */
+.nova-node[data-related='true'] .nova-point {
+  opacity: 1;
+  fill: var(--color-bahama-turquoise);
+}
+
+/* Keyboard parity with hover. The hit target is a transparent rect, so the
+   ring is drawn on the group rather than on an invisible box. */
+.nova-node:focus-within .nova-point {
+  opacity: 1;
+  fill: var(--color-bahama-turquoise);
+}
+
+.nova-node:focus-within {
+  outline: 2px solid var(--color-bahama-turquoise);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* ---- Connection ---------------------------------------------------------
+   An arc between two passages cut from the SAME INSTRUMENT.
+
+   Faint at rest, because the relationship is context rather than content —
+   the findings below say everything the founder needs, and a bright web of
+   lines would compete with them for attention. It brightens only when one of
+   its endpoints is under focus, which is the moment the question "what else
+   came from this document?" is actually being asked.
+
+   ⚠ Styled as a hairline, never as an arrow. An arrow implies direction, and
+     direction between two provisions is a legal relationship nothing in this
+     system is able to establish. */
+
+.nova-edge {
+  stroke: var(--color-on-ink);
+  stroke-width: 0.75;
+  opacity: 0.22;
+  transition:
+    opacity var(--duration-quick) var(--ease-settle),
+    stroke var(--duration-quick) var(--ease-settle);
+}
+
+.nova-edge[data-related='true'] {
+  stroke: var(--color-bahama-turquoise);
+  opacity: 0.9;
+  stroke-width: 1.1;
+}
+
+/* ---- Findings -----------------------------------------------------------
+   A finding is not a card.
+
+   Cards were the wrong metaphor: eight bordered boxes stacked vertically read
+   as a list of records, which is precisely the "government database" the
+   product must not feel like. A finding is a band — hairline-separated,
+   full-width, with an evidence rail down its left edge. The rail is what
+   carries continuity from one finding to the next, so the answer reads as one
+   investigation rather than as several results.
+
+   `--nova-rail` is the spine. It lights when the finding is related to the
+   focused source, which is the same relationship the field shows, expressed in
+   the other direction. */
+
+.nova-finding {
+  --nova-rail-opacity: 0.14;
+  position: relative;
+  transition: background-color var(--duration-quick) var(--ease-enter);
+}
+
+.nova-finding::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: var(--color-bahama-turquoise);
+  opacity: var(--nova-rail-opacity);
+  transition: opacity var(--duration-quick) var(--ease-enter);
+}
+
+.nova-finding[data-related='true'] {
+  --nova-rail-opacity: 0.9;
+  background-color: oklch(100% 0 0 / 0.02);
+}
+
+/* The node on the rail, marking where this finding sits in the investigation. */
+.nova-finding-node {
+  position: absolute;
+  left: -3.5px;
+  top: 1.85rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-glass-deep);
+  border: 1px solid var(--color-bahama-turquoise);
+  opacity: 0.5;
+  transition:
+    opacity var(--duration-quick) var(--ease-enter),
+    background-color var(--duration-quick) var(--ease-enter);
+}
+
+.nova-finding[data-related='true'] .nova-finding-node {
+  opacity: 1;
+  background: var(--color-bahama-turquoise);
+}
+
+/* ---- Staged bands -------------------------------------------------------
+   The receipt-printer principle, applied at the right granularity.
+
+   Previously `.stage-in` revealed a whole finding at once. The idea worth
+   borrowing is finer than that: a receipt does not appear, it FEEDS — line by
+   line, in the order the machine prints them. A finding assembles in the order
+   the pipeline established it:
+
+       provision → passage → source → agency → later effects
+
+   ⚠ This stages information that has ALREADY ARRIVED. It must never be read as
+     data still being fetched, so it is fast (55ms steps, capped) and the
+     status line above it is not present during the reveal. Padding a response
+     to look like work is the one thing this whole architecture exists not to
+     do. */
+
+.stage-band {
+  animation: stage-in var(--duration-settle) var(--ease-settle) both;
+  animation-delay: calc(min(var(--band, 0), 6) * 55ms);
 }

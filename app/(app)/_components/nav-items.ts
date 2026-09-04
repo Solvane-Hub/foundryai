@@ -38,6 +38,22 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     items: [
       { href: '/dashboard', label: 'Dashboard', available: true, icon: LayoutDashboard },
+      /**
+       * Nova sits directly under the dashboard, and is `available`.
+       *
+       * It was listed under "Coming soon" long after it shipped. The extractive
+       * reasoner, its envelope gate, citation grounding, jurisdiction-scoped
+       * retrieval, rate limiting and execution recording are all built and
+       * tested, and a Knowledge Pack is published — so describing it as
+       * forthcoming was the same class of error as describing an unbuilt
+       * surface as ready, in the other direction.
+       *
+       * The route gates itself: with no published pack for the founder's
+       * jurisdiction it shows the roadmap surface rather than a composer
+       * (app/(app)/assistant/page.tsx), so promoting it here cannot imply a
+       * capability the corpus does not support.
+       */
+      { href: '/assistant', label: 'Nova', available: true, icon: Sparkles },
       { href: '/intake', label: 'Business intake', available: true, icon: ListChecks },
     ],
   },
@@ -48,7 +64,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { href: '/compliance', label: 'Compliance', available: false, icon: ShieldCheck },
       { href: '/funding', label: 'Funding', available: false, icon: Banknote },
       { href: '/documents', label: 'Documents', available: false, icon: FileText },
-      { href: '/assistant', label: 'Nova', available: false, icon: Sparkles },
     ],
   },
   {

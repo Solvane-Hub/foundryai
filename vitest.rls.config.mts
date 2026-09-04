@@ -1,0 +1,41 @@
+import { defineConfig, mergeConfig } from 'vitest/config';
+import { loadEnv } from 'vite';
+import base from './vitest.config.mts';
+
+/**
+ * Vitest configuration for the Row Level Security suite.
+ *
+ * The RLS tests run against a REAL Supabase project with REAL authenticated
+ * sessions (see tests/rls/client.ts) — mocking here would test the mock, not
+ * the security boundary. They therefore need the same credentials the app uses,
+ * which live in `.env.local` (gitignored, never committed).
+ *
+ * Vitest does not load `.env.local` into `process.env` on its own, so the base
+ * config left `NEXT_PUBLIC_SUPABASE_*` and `RLS_TEST_USER_*` undefined. That is
+ * why 50 tenant-isolation tests were silently SKIPPED: `rlsConfigured` was
+ * false because the values never reached the worker. This config loads them and
+ * hands them to the test environment via `test.env`.
+ *
+ * It also forces `RLS_TESTS_REQUIRED=1` regardless of what `.env.local` sets, so
+ * `npm run test:rls` FAILS LOUDLY when a credential is missing rather than
+ * quietly skipping a security suite. `tests/rls/client.ts` reads this flag and
+ * the test files throw on `!rlsConfigured && rlsRequired`.
+ *
+ * No secret is committed here: values are read from `.env.local` at runtime.
+ */
+const fileEnv = loadEnv('', process.cwd(), '');
+
+export default mergeConfig(
+  base,
+  defineConfig({
+    test: {
+      // The `test:rls` script narrows execution to tests/rls with a positional
+      // filter; this config only supplies the environment those tests need.
+      env: {
+        ...fileEnv,
+        // A missing credential must fail this suite, never skip it.
+        RLS_TESTS_REQUIRED: '1',
+      },
+    },
+  }),
+);

@@ -75,4 +75,17 @@ export async function archiveAll(db: Db, ownerId: string, namePrefix: string): P
   }
 }
 
-export const RUN = `rlstest-${Date.now()}`;
+/**
+ * A per-suite data namespace.
+ *
+ * ⚠ Includes random entropy, not just a timestamp. Both RLS suites sign in as
+ *   the SAME two auth users (A and B) and clean up by archiving every business
+ *   whose name starts with `RUN` (see `archiveAll`). When the two test files are
+ *   imported in the same millisecond — which Vitest's parallel workers routinely
+ *   do — a timestamp-only `RUN` collides, and one suite's `archiveAll` then
+ *   archives the other suite's fixtures mid-run. That made a broad cross-tenant
+ *   SELECT see a sibling suite's row and turned an "archived requires
+ *   archived_at" assertion into a no-op update. The random suffix makes each
+ *   suite's namespace disjoint so the suites cannot interfere.
+ */
+export const RUN = `rlstest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

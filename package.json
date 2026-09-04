@@ -21,7 +21,7 @@
     "test:a11y": "playwright test tests/e2e/accessibility.spec.ts",
     "test:e2e": "playwright test",
     "test:integration": "vitest run tests/integration",
-    "test:rls": "vitest run tests/rls",
+    "test:rls": "vitest run --config vitest.rls.config.mts tests/rls",
     "test:unit": "vitest run tests/unit",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

@@ -240,16 +240,24 @@ describe('manifest registry', () => {
     expect(manifestForJurisdiction(DEMO_ZZ_COUNTRY_CODE)).toBe(DEMO_ZZ_MANIFEST);
   });
 
-  it('registers no real jurisdiction', () => {
-    // BS in particular: BS-v0.1 is unpublished and gated on G11, and adding it
-    // here is a decision that belongs with the decision to publish.
+  it('registers BS now that BS-v0.1 is published', () => {
+    // Registering a manifest belongs with the decision to publish. BS-v0.1 is
+    // published (G11 eligibility cleared), so its manifest is wired in to resolve
+    // the VAT amendment chain.
+    const bs = manifestForJurisdiction('BS');
+    expect(bs).not.toBeNull();
+    expect(bs!.countryCode).toBe('BS');
+    expect(jurisdictionsWithManifest()).toContain('BS');
+  });
+
+  it('registers only ZZ and BS — no other real jurisdiction', () => {
     for (const code of jurisdictionsWithManifest()) {
-      expect(isUserAssignedCountryCode(code), `${code} is a real jurisdiction`).toBe(true);
+      const allowed = code === 'BS' || isUserAssignedCountryCode(code);
+      expect(allowed, `${code} is an unexpected registered jurisdiction`).toBe(true);
     }
   });
 
   it('returns null for an unregistered jurisdiction', () => {
-    expect(manifestForJurisdiction('BS')).toBeNull();
     expect(manifestForJurisdiction('JM')).toBeNull();
   });
 });

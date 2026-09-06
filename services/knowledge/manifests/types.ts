@@ -1,5 +1,6 @@
 import type {
   KnowledgeFreshnessState,
+  KnowledgeSourceLegalStatus,
   KnowledgeSourceType,
   LegalSourceCategory,
   SourceAuthority,
@@ -383,6 +384,29 @@ export function amendmentsForProvision(
  * `registerSourceSchema` inside `ingestSource`. This function is a convenience,
  * never a substitute for that gate.
  */
+/**
+ * Map a manifest `LegalStatus` onto the persisted `KnowledgeSourceLegalStatus`.
+ *
+ * The two overlap but are not identical: the manifest carries `not_law` and
+ * `unknown`, which are not persisted standings. `assertManifestValid` already
+ * refuses to ingest `not_law`, and an `unknown` standing must be recorded as the
+ * fail-closed `unresolved` rather than silently becoming current law.
+ */
+export function toPersistedLegalStatus(status: LegalStatus): KnowledgeSourceLegalStatus {
+  switch (status) {
+    case 'in_force':
+    case 'base_text_amended':
+    case 'enacted_not_in_force':
+    case 'repealed':
+    case 'spent':
+    case 'superseded':
+      return status;
+    case 'not_law':
+    case 'unknown':
+      return 'unresolved';
+  }
+}
+
 export function toRegistrationInput(
   entry: SourceManifestEntry,
   params: { knowledgePackId: string; accessedAt?: string },
@@ -399,6 +423,9 @@ export function toRegistrationInput(
     legalSourceCategory: entry.legalSourceCategory,
     // Explicit, never defaulted (migration 20260823000000).
     freshnessState: entry.freshnessState,
+    // Explicit legal standing (migration 20260905201714). enacted_not_in_force
+    // and unresolved are excluded from current-law retrieval.
+    legalStatus: toPersistedLegalStatus(entry.legalStatus),
     publicationDate: entry.gazettedOn,
     effectiveDate: entry.commencementDate,
     expiryDate: null,

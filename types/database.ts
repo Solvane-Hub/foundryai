@@ -4,7 +4,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.15';
+    PostgrestVersion: '14.5';
   };
   public: {
     Tables: {
@@ -524,6 +524,7 @@ export type Database = {
       knowledge_packs: {
         Row: {
           approval_note: string | null;
+          commercial_publication_eligibility: Database['public']['Enums']['commercial_publication_eligibility'];
           country_code: string;
           created_at: string;
           id: string;
@@ -538,6 +539,7 @@ export type Database = {
         };
         Insert: {
           approval_note?: string | null;
+          commercial_publication_eligibility?: Database['public']['Enums']['commercial_publication_eligibility'];
           country_code: string;
           created_at?: string;
           id?: string;
@@ -552,6 +554,7 @@ export type Database = {
         };
         Update: {
           approval_note?: string | null;
+          commercial_publication_eligibility?: Database['public']['Enums']['commercial_publication_eligibility'];
           country_code?: string;
           created_at?: string;
           id?: string;
@@ -649,6 +652,7 @@ export type Database = {
           knowledge_pack_id: string;
           last_reviewed_date: string | null;
           legal_source_category: Database['public']['Enums']['legal_source_category'];
+          legal_status: Database['public']['Enums']['knowledge_source_legal_status'];
           manifest_id: string | null;
           municipality: string | null;
           publication_date: string | null;
@@ -674,6 +678,7 @@ export type Database = {
           knowledge_pack_id: string;
           last_reviewed_date?: string | null;
           legal_source_category: Database['public']['Enums']['legal_source_category'];
+          legal_status?: Database['public']['Enums']['knowledge_source_legal_status'];
           manifest_id?: string | null;
           municipality?: string | null;
           publication_date?: string | null;
@@ -699,6 +704,7 @@ export type Database = {
           knowledge_pack_id?: string;
           last_reviewed_date?: string | null;
           legal_source_category?: Database['public']['Enums']['legal_source_category'];
+          legal_status?: Database['public']['Enums']['knowledge_source_legal_status'];
           manifest_id?: string | null;
           municipality?: string | null;
           publication_date?: string | null;
@@ -1177,6 +1183,7 @@ export type Database = {
         };
         Returns: {
           approval_note: string | null;
+          commercial_publication_eligibility: Database['public']['Enums']['commercial_publication_eligibility'];
           country_code: string;
           created_at: string;
           id: string;
@@ -1205,11 +1212,20 @@ export type Database = {
         | 'launch_plan_generated'
         | 'active'
         | 'archived';
+      commercial_publication_eligibility: 'restricted' | 'cleared';
       instrument_role: 'substantive' | 'amending_instruction' | 'unknown';
       knowledge_freshness_state:
         'current' | 'review_due' | 'changed_pending_assessment' | 'stale' | 'withdrawn';
       knowledge_pack_status:
         'draft' | 'validating' | 'staged' | 'published' | 'superseded' | 'rolled_back';
+      knowledge_source_legal_status:
+        | 'in_force'
+        | 'base_text_amended'
+        | 'enacted_not_in_force'
+        | 'repealed'
+        | 'spent'
+        | 'superseded'
+        | 'unresolved';
       knowledge_source_type:
         | 'act'
         | 'regulation'
@@ -1356,6 +1372,7 @@ export const Constants = {
         'active',
         'archived',
       ],
+      commercial_publication_eligibility: ['restricted', 'cleared'],
       instrument_role: ['substantive', 'amending_instruction', 'unknown'],
       knowledge_freshness_state: [
         'current',
@@ -1371,6 +1388,15 @@ export const Constants = {
         'published',
         'superseded',
         'rolled_back',
+      ],
+      knowledge_source_legal_status: [
+        'in_force',
+        'base_text_amended',
+        'enacted_not_in_force',
+        'repealed',
+        'spent',
+        'superseded',
+        'unresolved',
       ],
       knowledge_source_type: [
         'act',

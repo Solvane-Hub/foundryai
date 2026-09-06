@@ -25,7 +25,13 @@ export function SurfaceTiles({ intakeComplete }: { intakeComplete: boolean }) {
       {upcoming.map((item) => {
         const Icon = item.icon;
         return (
-          <WorkspaceSurface as="li" tone="shell" interactive key={item.href} className="min-w-0">
+          <WorkspaceSurface
+            as="li"
+            tone="shell"
+            interactive
+            key={item.href}
+            className="min-w-0 transition duration-200 ease-out hover:-translate-y-0.5"
+          >
             <Link
               href={item.href}
               className="flex h-full min-w-0 flex-col gap-3 rounded-[inherit] p-4 sm:gap-4 sm:p-5"

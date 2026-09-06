@@ -13,6 +13,22 @@ import { z } from 'zod';
 const serverSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  /**
+   * Fish Audio — Nova's optional speaking voice.
+   *
+   * ⚠ Server-only, and deliberately so. `FISH_API_KEY` is a bearer credential
+   *   for a paid provider; it must never reach the browser bundle, never be
+   *   logged, and never be committed. It lives here (not in `clientSchema`) for
+   *   the same reason `SUPABASE_SERVICE_ROLE_KEY` does — importing this module
+   *   from a Client Component is a build error.
+   *
+   *   Both are optional: Nova works fully without a voice, and the
+   *   `/api/nova/speak` route degrades gracefully (503) when either is absent,
+   *   so a deployment without a Fish account is a supported configuration
+   *   rather than a boot failure.
+   */
+  FISH_API_KEY: z.string().min(1).optional(),
+  FISH_NOVA_VOICE_ID: z.string().min(1).optional(),
 });
 
 /**
@@ -82,6 +98,8 @@ function parseServerEnv(source: EnvSource): z.infer<typeof serverSchema> {
   const parsed = serverSchema.safeParse({
     NODE_ENV: source.NODE_ENV,
     SUPABASE_SERVICE_ROLE_KEY: source.SUPABASE_SERVICE_ROLE_KEY,
+    FISH_API_KEY: source.FISH_API_KEY,
+    FISH_NOVA_VOICE_ID: source.FISH_NOVA_VOICE_ID,
   });
   if (!parsed.success) {
     throw new Error(

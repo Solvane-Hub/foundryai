@@ -47,6 +47,7 @@ function pack(overrides: Partial<KnowledgePack> = {}): KnowledgePack {
     approval_note: null,
     superseded_at: null,
     superseded_by_id: null,
+    commercial_publication_eligibility: 'cleared',
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
     ...overrides,

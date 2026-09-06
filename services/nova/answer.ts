@@ -10,6 +10,7 @@ import type {
 } from '@/lib/ai/agents/nova/contract';
 import type { SourceManifest, SourceManifestEntry } from '@/services/knowledge/manifests/types';
 import type {
+  NotInForceMatch,
   NovaRetrievalResult,
   NovaRetrievalRun,
   NovaRetrievedChunk,
@@ -102,6 +103,14 @@ export interface NovaAnswer {
   envelope: NovaEnvelope | null;
   citations: readonly ClaimCitations[];
   amendmentNotices: readonly AmendmentNotice[];
+  /**
+   * Instruments that bear on the question but were excluded from the answer
+   * because they are not current law (enacted-not-in-force, repealed, etc.).
+   * Also folded into `unresolved` so a refusal or answer names them explicitly —
+   * "enacted, but I have no evidence it has commenced, so I am not treating it as
+   * current law" — rather than silently omitting them.
+   */
+  notInForceNotices: readonly NotInForceMatch[];
   coverage: CoverageSignal;
   /**
    * The jurisdiction this run was scoped to.
@@ -409,6 +418,7 @@ function noPublishedKnowledgeAnswer(
     envelope: null,
     citations: [],
     amendmentNotices: [],
+    notInForceNotices: [],
     coverage: retrieval.coverage,
     jurisdiction: retrieval.countryCode,
     knowledgeVersion: null,
@@ -475,6 +485,32 @@ export async function answerNovaQuestion(db: Db, request: NovaAnswerRequest): Pr
  * Split out so the orchestration can be exercised without a database stub —
  * the interesting behaviour is here, not in the query.
  */
+/** Human phrasing for why a not-current instrument is not treated as current law. */
+function notInForceReason(status: NotInForceMatch['legalStatus']): string {
+  switch (status) {
+    case 'enacted_not_in_force':
+      return 'has been enacted but there is no evidence it has commenced';
+    case 'repealed':
+      return 'has been repealed';
+    case 'spent':
+      return 'is spent';
+    case 'superseded':
+      return 'has been superseded';
+    default:
+      return 'has a legal standing that is not established';
+  }
+}
+
+/** Turn excluded not-in-force instruments into explicit unresolved notes. */
+function notInForceUnresolved(matches: readonly NotInForceMatch[]): NovaUnresolved[] {
+  return matches.map((m) => ({
+    question: `Current applicability of ${m.title}`,
+    why:
+      `${m.title} ${notInForceReason(m.legalStatus)}, so it is not treated as current law and ` +
+      'was not used to answer. It may be relevant to a question about future or commencement dates.',
+  }));
+}
+
 export function assembleAnswer(
   retrieval: NovaRetrievalRun,
   request: NovaAnswerRequest,
@@ -500,18 +536,21 @@ export function assembleAnswer(
     request.manifest,
   );
 
+  const notInForceGaps = notInForceUnresolved(retrieval.excludedNotInForce);
+
   return {
     outcome: outcomeFor(envelope),
     envelope,
     citations,
     amendmentNotices: notices,
+    notInForceNotices: retrieval.excludedNotInForce,
     coverage: retrieval.coverage,
     jurisdiction: request.context.retrieval.countryCode,
     knowledgeVersion: retrieval.reproducibility.knowledgePackVersion,
     packId: retrieval.packId,
     reproducibility: retrieval.reproducibility,
     retrievedChunkIds: retrieval.chunks.map((c) => c.chunkId),
-    unresolved: [...envelope.unresolved, ...amendmentGaps],
+    unresolved: [...envelope.unresolved, ...amendmentGaps, ...notInForceGaps],
     retrievedAt: retrieval.retrievedAt,
   };
 }

@@ -6,7 +6,12 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/services/auth';
 import { getOwnProfile } from '@/services/profile';
 import { getActiveCountries, listBusinesses, resolveCurrentBusiness } from '@/services/business';
-import { getIntakeProfile, intakeProgress, readKnowledge } from '@/services/intake';
+import {
+  getIntakeProfile,
+  intakeProgress,
+  isKnowledgeEstablished,
+  readKnowledge,
+} from '@/services/intake';
 import { buildJourney } from '@/services/progress';
 import { CURRENT_BUSINESS_COOKIE } from '@/lib/business-cookie';
 import { BUSINESS_STAGE_LABELS, type BusinessStage } from '@/lib/validation/intake';
@@ -16,8 +21,10 @@ import { PageHeader } from '@/components/ui/page-header';
 import { WorkspaceCanvas } from '@/components/ui/workspace-canvas';
 import { WorkspaceSurface, SurfaceLabel } from '@/components/ui/workspace-surface';
 import { BusinessSnapshot, type SnapshotRow } from '../_components/business-snapshot';
+import { DashboardPriorities, type PriorityItem } from '../_components/dashboard-priorities';
+import { DashboardQuickActions } from '../_components/dashboard-quick-actions';
 import { IntakeDial } from '../_components/intake-dial';
-import { NextMove } from '../_components/next-move';
+import { NovaInvite } from '../_components/nova-invite';
 import { RouteSummary } from '../_components/route-summary';
 import { SurfaceTiles } from '../_components/surface-tiles';
 
@@ -157,28 +164,42 @@ export default async function DashboardPage() {
     },
   ];
 
+  // What requires attention, from real state only: the intake slots that are
+  // not yet established. Each links to the route that resolves it — no invented
+  // tasks. The next move (below) is derived by buildJourney().
+  const openItems: PriorityItem[] = rows
+    .filter((row) => !isKnowledgeEstablished(row.state ?? 'unknown'))
+    .map((row) => ({ label: row.label, href: row.href }));
+
   return (
-    <div className="workspace-env flex flex-col gap-6 sm:gap-8">
-      {/* 1 — where am I. On the water, not on a surface. */}
-      <header className="flex flex-col gap-5 px-1 pt-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8 sm:pt-8 lg:pt-10">
+    <div className="workspace-env flex flex-col gap-3 sm:gap-4">
+      {/*
+        Compact contextual header — "where am I" without the business name
+        occupying half the viewport. The name moves into the context line; the
+        heading names the surface, the way the reference's "Project Overview"
+        does.
+      */}
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 px-1 pt-2 sm:pt-3">
         <div className="min-w-0">
           <p className="text-2xs text-champagne font-medium tracking-[0.18em] uppercase">
             {greeting ? `${greeting}’s workspace` : 'Workspace'}
           </p>
-          <h1 className="text-on-ink mt-3 text-3xl font-semibold tracking-[-0.03em] text-balance sm:text-4xl lg:text-5xl">
-            {current.name}
+          <h1 className="text-on-ink mt-1.5 text-xl font-semibold tracking-[-0.02em] text-balance sm:text-2xl">
+            Business overview
           </h1>
-          <p className="text-on-ink-muted mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm">
+          <p className="text-on-ink-muted mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm">
+            <span className="text-on-ink font-medium">{current.name}</span>
+            <span aria-hidden="true" className="h-3 w-px bg-white/15" />
             <span>{countryName}</span>
             {current.industry ? (
               <>
-                <span aria-hidden="true" className="text-on-ink-muted">
+                <span aria-hidden="true" className="text-on-glass-subtle">
                   ·
                 </span>
                 <span>{current.industry}</span>
               </>
             ) : null}
-            <span aria-hidden="true" className="h-3 w-px bg-white/20" />
+            <span aria-hidden="true" className="h-3 w-px bg-white/15" />
             <span className="text-on-ink">{status}</span>
           </p>
         </div>
@@ -191,44 +212,65 @@ export default async function DashboardPage() {
         </Link>
       </header>
 
-      {/* 2 — the instrument. One surface, four sections, hairlines between. */}
-      <WorkspaceSurface className="flex flex-col divide-y divide-white/8">
-        <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)] lg:p-7">
-          <NextMove milestone={journey.next} />
+      {/*
+        The spatial workspace — not a stack of equal cards. A quiet secondary
+        control column on the left (recessed inset surfaces), the dominant
+        business-intelligence workspace on the right (a lifted shell), the
+        founder journey sitting DIRECTLY on the workspace beneath it (no card),
+        Nova as an atmospheric presence beside the journey, and one floating
+        panel breaking the grid at the foreground. Materials differ by role, so
+        the surfaces read at different depths rather than as one card grid.
+      */}
+      <div className="relative grid gap-3.5 sm:gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] lg:items-start">
+        {/* LEFT — secondary control column. Recessed, dense, quiet. */}
+        <div className="flex flex-col gap-3.5 sm:gap-4">
+          <DashboardPriorities nextMove={journey.next} openItems={openItems} className="flex-1" />
           <IntakeDial completed={progress.completed} total={progress.total} />
         </div>
 
-        <section
-          aria-labelledby="snapshot-heading"
-          className="flex flex-col gap-6 px-4 py-7 sm:px-6 sm:py-9 lg:px-7"
-        >
-          <div className="flex flex-col gap-2">
-            <SurfaceLabel id="snapshot-heading">What FoundryAI knows</SurfaceLabel>
-            {intake?.description ? (
-              <p className="text-on-ink-muted max-w-2xl text-sm text-pretty italic">
-                “{intake.description}”
-              </p>
-            ) : null}
-          </div>
-          <BusinessSnapshot rows={rows} unanswered={progress.total - progress.completed} />
-        </section>
+        {/* RIGHT — the dominant workspace, then journey · Nova. */}
+        <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
+          {/* PRIMARY — FoundryAI's understanding of the business. Lifted, spacious. */}
+          <WorkspaceSurface
+            as="section"
+            tone="shell"
+            aria-labelledby="snapshot-heading"
+            className="flex flex-col gap-7 p-6 sm:p-8 lg:p-9"
+          >
+            <div className="flex flex-col gap-2.5">
+              <SurfaceLabel id="snapshot-heading">What FoundryAI knows</SurfaceLabel>
+              {intake?.description ? (
+                <p className="text-on-ink max-w-2xl text-lg leading-relaxed text-pretty italic sm:text-xl">
+                  “{intake.description}”
+                </p>
+              ) : null}
+            </div>
+            <BusinessSnapshot rows={rows} unanswered={progress.total - progress.completed} />
+          </WorkspaceSurface>
 
-        <section
-          aria-labelledby="route-heading"
-          className="flex flex-col gap-7 px-4 py-7 sm:px-6 sm:py-9 lg:px-7"
-        >
-          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-            <SurfaceLabel id="route-heading">Your route</SurfaceLabel>
-            <p className="text-on-ink-muted text-xs">
-              What FoundryAI needs from you, and what it can do once it has it.
-            </p>
-          </div>
-          <RouteSummary milestones={journey.milestones} />
-        </section>
-      </WorkspaceSurface>
+          {/* JOURNEY (on the workspace) · NOVA (atmospheric presence). */}
+          <div className="relative grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+            <section
+              aria-labelledby="route-heading"
+              className="flex min-w-0 flex-col gap-6 px-1 pt-1"
+            >
+              <SurfaceLabel id="route-heading">Founder journey</SurfaceLabel>
+              <RouteSummary milestones={journey.milestones} />
+            </section>
 
-      {/* 3 — the rooms that are coming online. */}
-      <section aria-labelledby="surfaces-heading" className="flex flex-col gap-4">
+            <NovaInvite />
+
+            {/* FLOATING — foreground utility, overlapping the workspace edge. */}
+            <DashboardQuickActions
+              intakeComplete={intakeComplete}
+              className="mt-1 lg:absolute lg:right-1 lg:-bottom-5 lg:z-20 lg:mt-0 lg:w-56"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Directly on the workspace — the rooms that are coming online. */}
+      <section aria-labelledby="surfaces-heading" className="mt-2 flex flex-col gap-3">
         <SurfaceLabel id="surfaces-heading" className="px-1">
           Coming online
         </SurfaceLabel>

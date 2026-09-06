@@ -52,7 +52,7 @@ import type { NovaAnswerView } from '@/types/nova';
  */
 const PHASE_HOLD_MS = 620;
 
-const PHASE_SEQUENCE = ['searching', 'evaluating', 'composing'] as const;
+const PHASE_SEQUENCE = ['searching', 'connecting', 'composing'] as const;
 
 /**
  * Status copy.
@@ -61,10 +61,16 @@ const PHASE_SEQUENCE = ['searching', 'evaluating', 'composing'] as const;
  *   selects and quotes passages from a published corpus — it does not think,
  *   consider or decide, and copy implying otherwise would describe a system we
  *   deliberately did not build. A test asserts this.
+ *
+ * The three phases name work the pipeline genuinely performs, in order —
+ * retrieval, then the deterministic filtering/ranking that draws the retrieved
+ * passages together, then extraction. `connecting` describes that middle stage
+ * and mirrors the presence gathering the field; it asserts no count and no legal
+ * relationship (the constellation only ever links passages from one document).
  */
 const PHASE_COPY: Record<(typeof PHASE_SEQUENCE)[number], string> = {
   searching: 'Searching the published sources for your jurisdiction…',
-  evaluating: 'Narrowing to the passages that match your question…',
+  connecting: 'Drawing the retrieved passages together…',
   composing: 'Assembling the answer from what was found…',
 };
 

@@ -1,5 +1,6 @@
 import type { KnowledgeChunk, KnowledgePack, KnowledgeSource } from '@/types/knowledge';
 import type { SourceManifest } from '@/services/knowledge/manifests/types';
+import { toPersistedLegalStatus } from '@/services/knowledge/manifests/types';
 import { toCanonicalProvisionId } from '@/lib/knowledge/provision';
 import {
   DEMO_ZZ_AGENCY,
@@ -65,6 +66,8 @@ export const ZZ_PACK: KnowledgePack = {
   approval_note: null,
   superseded_at: null,
   superseded_by_id: null,
+  // Synthetic FoundryAI-authored corpus: no third-party copyright, publishable.
+  commercial_publication_eligibility: 'cleared',
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
 };
@@ -88,6 +91,7 @@ export const ZZ_SOURCES: KnowledgeSource[] = DEMO_ZZ_MANIFEST.entries.map((entry
   last_reviewed_date: '2026-07-01',
   review_due_at: null,
   freshness_state: entry.freshnessState,
+  legal_status: toPersistedLegalStatus(entry.legalStatus),
   accessed_at: '2026-08-08T00:00:00.000Z',
   content_hash: 'synthetic-hash',
   content_media_type: 'text/html',

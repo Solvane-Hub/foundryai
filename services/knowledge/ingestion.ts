@@ -135,6 +135,9 @@ export async function ingestSource(
     // Explicit, never defaulted. A source whose standing has not been
     // established must not enter the pack asserting that it is current.
     freshness_state: reg.freshnessState,
+    // Explicit legal standing. enacted_not_in_force / unresolved are kept out of
+    // current-law retrieval downstream.
+    legal_status: reg.legalStatus,
     publication_date: reg.publicationDate ?? null,
     effective_date: reg.effectiveDate ?? null,
     expiry_date: reg.expiryDate ?? null,

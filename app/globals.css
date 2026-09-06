@@ -562,10 +562,27 @@
    the same "arriving in stages" idea the receipt printer uses on its feed,
    applied to a mark rather than to paper. */
 [data-nova-state='composing'] .nova-point,
+[data-nova-state='connecting'] .nova-point,
+[data-nova-state='speaking'] .nova-point,
 [data-nova-state='ready'] .nova-point,
 [data-nova-state='limited'] .nova-point {
   transform: translate(calc(var(--cx) * 1px), calc(var(--cy) * 1px));
   transition-delay: calc(var(--i) * 40ms);
+}
+
+/* Connecting: the field has come together and is being related; axis lit,
+   points held bright. The rich behaviour lives in the presence canvas — this
+   only keeps the small mark coherent if it is ever shown in this state. */
+[data-nova-state='connecting'] {
+  --nova-axis-opacity: 0.65;
+  --nova-point-opacity: 0.9;
+}
+
+/* Speaking: the answer exists and Nova is voicing it. Converged and lit; the
+   physical reaction to audio is the presence's job, not the mark's. */
+[data-nova-state='speaking'] {
+  --nova-axis-opacity: 0.9;
+  --nova-point-opacity: 1;
 }
 
 [data-nova-state='listening'] {
@@ -920,4 +937,117 @@
 .stage-band {
   animation: stage-in var(--duration-settle) var(--ease-settle) both;
   animation-delay: calc(min(var(--band, 0), 6) * 55ms);
+}
+
+/* ---- Nova presence video ------------------------------------------------
+   The generated Kling asset, composited into the environment rather than
+   embedded as a video box.
+
+   `mix-blend-mode: screen` drops the asset's near-black ground (black adds
+   nothing under screen) so only Nova's light lands on the dark surface behind
+   it; a radial mask feathers the rectangular edges away. ⚠ The wrapper is NOT
+   isolated, deliberately — screen must blend against the frame/environment
+   behind it, not just against itself, or the black ground would show as a box.
+
+   Scale, brightness, saturation and glow are driven by CSS custom properties
+   the component sets: eased between states, and updated per frame (transition
+   suppressed) while Nova speaks. */
+.nova-video {
+  position: relative;
+  overflow: hidden;
+}
+
+.nova-video__glow {
+  position: absolute;
+  inset: -12%;
+  background: radial-gradient(circle at 50% 45%, oklch(76% 0.127 203 / 0.16), transparent 60%);
+  opacity: calc(0.5 + var(--nova-glow, 0.2) * 0.6);
+  transition: opacity var(--duration-considered) var(--ease-enter);
+  pointer-events: none;
+}
+
+.nova-video__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: screen;
+  transform: scale(var(--nova-scale, 1));
+  filter: brightness(var(--nova-bright, 1)) saturate(var(--nova-sat, 1));
+  transition:
+    transform var(--duration-considered) var(--ease-settle),
+    filter var(--duration-considered) var(--ease-enter);
+  will-change: transform, filter;
+  -webkit-mask-image: radial-gradient(circle at 50% 46%, #000 52%, transparent 82%);
+  mask-image: radial-gradient(circle at 50% 46%, #000 52%, transparent 82%);
+}
+
+/* While speaking, the analyser drives the vars every frame, so the state
+   easing is dropped to zero duration — the values apply instantly with no CSS
+   lag (the eased state-to-state transition resumes when speaking ends). */
+.nova-video[data-speaking='true'] .nova-video__media {
+  transition-duration: 0s;
+}
+
+/* ---- Application environment --------------------------------------------
+   The dark atmosphere the whole application floats in. Near-black, with two
+   restrained deep-ocean-blue lights — one high-right, one low-left — and a
+   corner vignette that pulls the edges back to black so the frame reads as a
+   physical object suspended in space. No photograph, no gradient hero.
+
+   A single low-opacity glow layer drifts slowly so the environment feels alive
+   without anyone consciously noticing it moves; gated behind `no-preference`
+   because a looping transform is exactly what the reduced-motion preference is
+   for. The base atmosphere is static and always present. */
+.app-environment {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 48% at 78% 12%, oklch(46% 0.09 245 / 0.3), transparent 60%),
+    radial-gradient(52% 48% at 15% 94%, oklch(40% 0.07 235 / 0.2), transparent 62%),
+    linear-gradient(180deg, #050b12 0%, #02060c 56%, #010409 100%);
+}
+.app-environment::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(92% 78% at 50% 42%, transparent 44%, rgba(0, 0, 0, 0.62));
+}
+.app-environment__glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(38% 38% at 72% 20%, oklch(55% 0.11 240 / 0.22), transparent 60%);
+  opacity: 0.85;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes atmo-drift {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 0.78;
+    }
+    100% {
+      transform: translate3d(-4%, 3%, 0) scale(1.09);
+      opacity: 1;
+    }
+  }
+  .app-environment__glow {
+    animation: atmo-drift 26s ease-in-out infinite alternate;
+  }
+}
+
+/* ---- Application frame --------------------------------------------------
+   The floating instrument itself. A soft, wide dark shadow seats it into the
+   environment, and a very faint blue ambient halo lifts it off the black — the
+   reference's "light behind the application", in FoundryAI's palette. The inset
+   top hairline is the upper-edge reflection. */
+.app-frame {
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 0.06),
+    0 44px 120px -44px rgba(0, 0, 0, 0.92),
+    0 0 110px -30px oklch(52% 0.09 240 / 0.28);
 }

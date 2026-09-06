@@ -40,7 +40,11 @@ export default async function AssistantPage() {
 
   const intakeComplete = Boolean(intake?.completed_at);
   const knowledgePublished = capability.knowledgePublished;
-  const ready = Boolean(current) && knowledgePublished;
+  // Nova is per-business, so a business must be selected — but a MISSING published
+  // pack is NOT a reason to hide Nova. The console always renders for a business;
+  // the absence of jurisdictional evidence is a Nova state (NO_EVIDENCE), not a
+  // different page. Only "no business at all" is a genuine upstream prerequisite.
+  const ready = Boolean(current);
 
   /**
    * What Foundry holds for this jurisdiction, in one line.
@@ -64,7 +68,9 @@ export default async function AssistantPage() {
       ? capability.syntheticCorpus
         ? `${countryName} · ${capability.knowledgeVersion} — a SYNTHETIC demonstration corpus. Not real law.`
         : `${countryName} · ${capability.knowledgeVersion} published. Nova quotes only from these sources.`
-      : null;
+      : countryName
+        ? `${countryName} — no published Knowledge Pack yet. Nova answers only from published, cited sources, so it has nothing to quote here.`
+        : null;
 
   return (
     /*
@@ -86,7 +92,11 @@ export default async function AssistantPage() {
       {!ready ? <PageHeader eyebrow="In development" title="Nova" /> : null}
 
       {ready && current ? (
-        <NovaConsole businessName={current.name} knowledgeLine={knowledgeLine} />
+        <NovaConsole
+          businessName={current.name}
+          knowledgeLine={knowledgeLine}
+          knowledgePublished={knowledgePublished}
+        />
       ) : (
         <RoadmapSurface
           purpose="Questions about your business answered from the same cited evidence as the rest of the workspace — never from a model’s memory."

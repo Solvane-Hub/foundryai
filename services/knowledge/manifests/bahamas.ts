@@ -36,6 +36,8 @@ const VAT_AMD_2025_1 = 'BS-VAT-AMD-2025-NO3';
 const VAT_AMD_2025_2 = 'BS-VAT-AMD-2025-NO45';
 /** No. 4 of 2026. */
 const VAT_AMD_2026_1 = 'BS-VAT-AMD-2026-NO4';
+/** No. 2 Act of 2026 (record 2026-0019). */
+const VAT_AMD_2026_2 = 'BS-VAT-AMD-2026-NO19';
 /** Ch. 324A, No. 3 of 2003. */
 const DPA_CH324A = 'BS-DPA-CH324A-2003';
 /** No. 74 of 2025. */
@@ -79,7 +81,7 @@ export const BAHAMAS_MANIFEST: SourceManifest = {
       amends: null,
       amendedProvisions: [],
       repeals: null,
-      amendedBy: [VAT_AMD_2025_1, VAT_AMD_2025_2, VAT_AMD_2026_1],
+      amendedBy: [VAT_AMD_2025_1, VAT_AMD_2025_2, VAT_AMD_2026_1, VAT_AMD_2026_2],
       repealedBy: null,
 
       statusEvidence: [
@@ -299,6 +301,74 @@ export const BAHAMAS_MANIFEST: SourceManifest = {
           'resolves in the BILLS namespace to the National Youth Commission Bill, 2026.',
         'Exempts qualifying unprepared food items — directly material to food businesses.',
         'G1: confirm no later commencement order varies this Act.',
+      ],
+    },
+
+    // ── No. 2 Act of 2026 (record 2026-0019) — freshness ingest ──────────
+    {
+      manifestId: VAT_AMD_2026_2,
+      suppliedUrl: `${LAWS}/AMENDING/2026/2026-0019A/2026-0019A.pdf`,
+      canonicalUrl: `${LAWS}/AMENDING/2026/2026-0019A/2026-0019A.pdf`,
+      fetchStatus: 'fetched',
+      textLayerPresent: true,
+
+      countryCode: 'BS',
+      agency: 'Government of The Bahamas',
+      title: 'Value Added Tax (Amendment) (No. 2) Act, 2026',
+      sourceType: 'act',
+      legalSourceCategory: 'primary_legislation',
+      sourceAuthority: 5,
+      freshnessState: 'current',
+
+      actNumber: 'No. 2 Act of 2026',
+      chapter: null,
+      gazettedOn: '2026-06-30',
+      assentedOn: '2026-06-30',
+      // General commencement 1 July 2026 (in force). Clause 4 (Second Schedule)
+      // has a SEPARATE appointed-day commencement not yet fixed — see reviewNotes;
+      // it is not recorded here because no date has been appointed and none may be
+      // fabricated.
+      commencementDate: '2026-07-01',
+      varyingCommencement: [],
+      consolidatedAsAt: null,
+      legalStatus: 'in_force',
+
+      amends: VAT_ACT,
+      amendedProvisions: ['section 23A', 'section 56', 'Second Schedule', 'Third Schedule'],
+      repeals: null,
+      amendedBy: [],
+      repealedBy: null,
+
+      statusEvidence: [
+        { quote: 'VALUE ADDED TAX (AMENDMENT) (NO. 2) ACT, 2026', locator: 'Long title' },
+        { quote: '[Date of Assent - 30th June, 2026]', locator: 'Assent block' },
+        {
+          quote:
+            '(2) Subject to subsection (3), this Act shall come into force on the 1st day of July, 2026.',
+          locator: 'section 1(2)',
+        },
+        {
+          quote:
+            '(3) Clause 4 of this Act shall come into force on such date as the Minister may appoint by notice published in the Gazette.',
+          locator: 'section 1(3)',
+        },
+        {
+          quote:
+            'The Third Schedule to the principal Act is amended in item (3), by the deletion of the figure “$500,000” and the substitution of the figure “$600,000”.',
+          locator: 'section 5',
+        },
+      ],
+      humanReviewRequired: true,
+      reviewNotes: [
+        'FRESHNESS: found during a currentness check against laws.bahamas.gov.bs; it was absent ' +
+          'from the first corpus. Raises the VAT registration threshold from $500,000 to $600,000 ' +
+          '(Third Schedule item 3), in force 1 July 2026 — the reprint still shows $500,000, so the ' +
+          'corpus was materially stale without this Act.',
+        'Split commencement: the Act is in force from 2026-07-01 EXCEPT clause 4 (Second Schedule, ' +
+          'Part I Exempt Supplies), which commences on an appointed day the Minister has not yet ' +
+          'fixed. The section-4 amendment must NOT be presented as current law until that day; ' +
+          'it is held for human review rather than recorded with a fabricated date.',
+        'Amends sections 23A and 56 (both present in the reprint) and the Second and Third Schedules.',
       ],
     },
 

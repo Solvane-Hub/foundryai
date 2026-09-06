@@ -49,6 +49,52 @@ export type KnowledgePackStatus =
 
 export type ValidationOutcome = 'validated' | 'partially_validated' | 'unverified' | 'rejected';
 
+/**
+ * A source's verified legal standing — represented EXPLICITLY, never inferred
+ * from the absence of a commencement date.
+ *
+ * Retrieval treats only `in_force` and `base_text_amended` as CURRENT applicable
+ * law. Everything else is excluded from current-law answers (though it may still
+ * be retrieved and cited for historical / future / commencement questions):
+ *
+ *   • `enacted_not_in_force` — passed and assented, commencement not yet
+ *     triggered. The Data Protection Act 2025 is the motivating case: its
+ *     commencement is an appointed day the Minister has not fixed, so it must
+ *     never be served as current law.
+ *   • `repealed` / `spent` / `superseded` — no longer the operative text.
+ *   • `unresolved` — standing not established from a primary source. Fail-closed:
+ *     an un-asserted status is NOT current law.
+ */
+export type KnowledgeSourceLegalStatus =
+  | 'in_force'
+  | 'base_text_amended'
+  | 'enacted_not_in_force'
+  | 'repealed'
+  | 'spent'
+  | 'superseded'
+  | 'unresolved';
+
+/** The statuses retrieval treats as current applicable law. */
+export const CURRENT_LAW_LEGAL_STATUSES: readonly KnowledgeSourceLegalStatus[] = Object.freeze([
+  'in_force',
+  'base_text_amended',
+]);
+
+/**
+ * G11 commercial-publication eligibility.
+ *
+ * A PUBLICATION/REDISTRIBUTION gate, not an ingestion gate. Official Government
+ * of The Bahamas legislation may be acquired and worked with for internal
+ * engineering, staging and testing, but not published as FoundryAI-served
+ * content until reuse permission is recorded. Fail-closed: packs are
+ * `'restricted'` until deliberately `'cleared'`. Successful retrieval never
+ * implies eligibility. Enforced atomically in `publish_knowledge_pack`.
+ *
+ * A FoundryAI-authored synthetic corpus (e.g. Example Jurisdiction ZZ) carries
+ * no third-party copyright and is `'cleared'`.
+ */
+export type CommercialPublicationEligibility = 'restricted' | 'cleared';
+
 /** K6 §2A.4. Freshness is NOT a fifth trust dimension. */
 export type KnowledgeFreshnessState =
   'current' | 'review_due' | 'changed_pending_assessment' | 'stale' | 'withdrawn';
@@ -96,6 +142,8 @@ export interface KnowledgePack {
   approval_note: string | null;
   superseded_at: string | null;
   superseded_by_id: string | null;
+  /** G11. Fail-closed 'restricted'; only a 'cleared' pack may be published. */
+  commercial_publication_eligibility: CommercialPublicationEligibility;
   created_at: string;
   updated_at: string;
 }
@@ -118,6 +166,8 @@ export interface KnowledgeSource {
   last_reviewed_date: string | null;
   review_due_at: string | null;
   freshness_state: KnowledgeFreshnessState;
+  /** Verified legal standing. Drives whether retrieval treats the source as current law. */
+  legal_status: KnowledgeSourceLegalStatus;
   accessed_at: string | null;
   content_hash: string | null;
   content_media_type: string | null;

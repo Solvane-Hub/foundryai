@@ -23,6 +23,8 @@ export const syntheticRegistration = {
   legalSourceCategory: 'primary_legislation' as const,
   // Mandatory since 20260823000000. Stated, never defaulted.
   freshnessState: 'current' as const,
+  // Mandatory since 20260905201714. Explicit legal standing.
+  legalStatus: 'in_force' as const,
   publicationDate: '2024-01-15',
   effectiveDate: '2024-03-01',
   expiryDate: null,

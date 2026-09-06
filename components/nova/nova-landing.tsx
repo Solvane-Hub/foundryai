@@ -27,6 +27,7 @@ import { currentNovaUpdate } from '@/lib/nova/updates';
 export function NovaLanding({
   businessName,
   knowledgeLine,
+  hero,
   children,
 }: {
   businessName: string;
@@ -37,6 +38,13 @@ export function NovaLanding({
    *   invents — if there is nothing to say, the caller passes null.
    */
   knowledgeLine: string | null;
+  /**
+   * Nova's presence, at rest. Supplied by the console (a client component that
+   * can resolve motion preference); when absent the landing falls back to the
+   * illustrative constellation scatter, which keeps this component usable and
+   * server-renderable on its own.
+   */
+  hero?: React.ReactNode;
   /** The composer and its starting points. */
   children: React.ReactNode;
 }) {
@@ -46,15 +54,16 @@ export function NovaLanding({
     <div className="flex flex-col gap-6 sm:gap-8">
       <section aria-labelledby="nova-intro-heading" className="flex flex-col gap-5 px-1">
         {/*
-          The field at rest: nodes scattered across the horizon, axis dim.
-          This is the "before" of the story the whole surface tells, and it is
-          the same visual language the answer resolves into — the constellation
-          there carries one node per retrieved source.
+          Nova's presence at rest — the physical instrument, quietly breathing,
+          particles loosely held. This is the "before" of the story the whole
+          surface tells, and it is the same object that gathers and converges
+          once a question is asked.
 
-          `aria-hidden` while empty, because an illustrative scatter is not a
-          measurement and must not be described as one.
+          Falls back to the constellation scatter when no hero is supplied, so
+          the landing still reads on its own. Both are decorative here — the
+          "Nova" heading below carries the identity to assistive technology.
         */}
-        <NovaField state="idle" nodes={[]} className="-mb-2 opacity-70" />
+        {hero ?? <NovaField state="idle" nodes={[]} className="-mb-2 opacity-70" />}
 
         <div className="flex items-start gap-5 sm:gap-6">
           <div className="min-w-0">

@@ -5,6 +5,9 @@ import { RouteSummary } from '@/app/(app)/_components/route-summary';
 import { BusinessSnapshot } from '@/app/(app)/_components/business-snapshot';
 import { IntakeDial } from '@/app/(app)/_components/intake-dial';
 import { SurfaceTiles } from '@/app/(app)/_components/surface-tiles';
+import { NovaInvite } from '@/app/(app)/_components/nova-invite';
+import { DashboardPriorities } from '@/app/(app)/_components/dashboard-priorities';
+import { DashboardQuickActions } from '@/app/(app)/_components/dashboard-quick-actions';
 import { NAV_GROUPS, NAV_ITEMS } from '@/app/(app)/_components/nav-items';
 import { RoadmapSurface } from '@/components/ui/roadmap-surface';
 import type { Milestone } from '@/services/progress';
@@ -226,6 +229,71 @@ describe('SurfaceTiles', () => {
     // rendered as a door with "In development" under it for days.
     render(<SurfaceTiles intakeComplete />);
     expect(screen.queryByText('Nova')).toBeNull();
+  });
+});
+
+describe('NovaInvite', () => {
+  it('offers a prominent, first-person entry into Nova', () => {
+    render(<NovaInvite />);
+    // "Investigate with Nova", never "Ask AI".
+    expect(screen.getByRole('heading', { name: 'Investigate with Nova' })).toBeInTheDocument();
+    expect(screen.queryByText(/ask ai/i)).toBeNull();
+  });
+
+  it('links to the Nova route, which gates itself on published knowledge', () => {
+    render(<NovaInvite />);
+    const link = screen.getByRole('link', { name: /investigate with nova/i });
+    expect(link).toHaveAttribute('href', '/assistant');
+  });
+
+  it('claims no capability beyond quoting cited sources', () => {
+    render(<NovaInvite />);
+    expect(screen.getByText(/cites every one/i)).toBeInTheDocument();
+  });
+});
+
+describe('DashboardPriorities', () => {
+  it('lists the next move and open intake items as real links', () => {
+    render(
+      <DashboardPriorities
+        nextMove={MILESTONES[1]!}
+        openItems={[{ label: 'Funding', href: '/intake?step=4' }]}
+      />,
+    );
+    expect(screen.getByText('Next move')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /funding/i })).toHaveAttribute(
+      'href',
+      '/intake?step=4',
+    );
+  });
+
+  it('communicates an empty state without inventing a task', () => {
+    render(<DashboardPriorities nextMove={null} openItems={[]} />);
+    expect(screen.getByText(/nothing waiting on you/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /investigate with nova/i })).toHaveAttribute(
+      'href',
+      '/assistant',
+    );
+  });
+});
+
+describe('DashboardQuickActions', () => {
+  it('offers real navigations and adapts to intake state', () => {
+    const { rerender } = render(<DashboardQuickActions intakeComplete={false} />);
+    expect(screen.getByRole('link', { name: /continue intake/i })).toHaveAttribute(
+      'href',
+      '/intake',
+    );
+    expect(screen.getByRole('link', { name: /investigate with nova/i })).toHaveAttribute(
+      'href',
+      '/assistant',
+    );
+
+    rerender(<DashboardQuickActions intakeComplete />);
+    expect(screen.getByRole('link', { name: /review intake/i })).toHaveAttribute(
+      'href',
+      '/intake/review',
+    );
   });
 });
 

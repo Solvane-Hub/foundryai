@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 import type { KnowledgeChunk, KnowledgeSource, SourceAuthority } from '@/types/knowledge';
+import { CURRENT_LAW_LEGAL_STATUSES } from '@/types/knowledge';
 import type {
   CoverageSignal,
   DeterministicFilters,
@@ -59,6 +60,23 @@ export interface NovaRetrievalQuery {
   queryRepresentation: string;
   topK?: number;
   filters?: NovaRequestedFilters;
+  /**
+   * Include instruments that are not current law (enacted-not-in-force, repealed,
+   * spent, superseded, unresolved) among the ranked results.
+   *
+   * Default false: current applicable law only. Set true ONLY when Nova is
+   * explicitly answering a historical, future or commencement question — never
+   * for "what must my business do now", which must never surface a provision
+   * that is not in force as though it were.
+   */
+  includeNotYetInForce?: boolean;
+}
+
+/** An in-pack instrument excluded from a current-law answer because it is not in force. */
+export interface NotInForceMatch {
+  manifestId: string | null;
+  title: string;
+  legalStatus: KnowledgeSource['legal_status'];
 }
 
 /**
@@ -124,6 +142,14 @@ export interface NovaRetrievalRun {
   coverage: CoverageSignal;
   reproducibility: RetrievalReproducibilityInputs;
   retrievedAt: string;
+  /**
+   * Instruments that lexically matched the query but were EXCLUDED from the
+   * ranked results because they are not current law (default current-law scope).
+   * Surfaced so the Assistant Service can say "an enacted-but-not-commenced
+   * instrument bears on this, but I am not treating it as current law" rather
+   * than silently omitting it. Empty when `includeNotYetInForce` is set.
+   */
+  excludedNotInForce: readonly NotInForceMatch[];
 }
 
 export type NovaRetrievalResult = NovaNoPublishedKnowledge | NovaRetrievalRun;
@@ -327,7 +353,29 @@ export async function retrieveNovaEvidence(
     exhaustedFilters.push(`minimum_source_authority:${minimumSourceAuthority}`);
   }
 
-  const inForce = meetsAuthority.filter((c) => isEffectiveOn(c, effectiveOn));
+  // Legal status (before effective-date and ranking). A source that is not
+  // current law — enacted-not-in-force, repealed, spent, superseded, or of
+  // unresolved standing — is never served as current applicable law. Null
+  // effective_date is NO LONGER read as "in force"; standing is explicit.
+  const isCurrentLaw = (chunk: KnowledgeChunk): boolean => {
+    const source = sourcesById.get(chunk.knowledge_source_id);
+    return source ? CURRENT_LAW_LEGAL_STATUSES.includes(source.legal_status) : false;
+  };
+  const includeNotYetInForce = query.includeNotYetInForce ?? false;
+  const currentLaw = includeNotYetInForce
+    ? meetsAuthority
+    : meetsAuthority.filter((c) => {
+        // A chunk whose source is missing is corruption, not "not current" — let
+        // it flow to the assembly integrity check, which reports it explicitly
+        // rather than silently dropping it here.
+        const source = sourcesById.get(c.knowledge_source_id);
+        return !source || CURRENT_LAW_LEGAL_STATUSES.includes(source.legal_status);
+      });
+  if (meetsAuthority.length > 0 && currentLaw.length === 0 && !includeNotYetInForce) {
+    exhaustedFilters.push('legal_status:current');
+  }
+
+  const inForce = currentLaw.filter((c) => isEffectiveOn(c, effectiveOn));
   if (meetsAuthority.length > 0 && inForce.length === 0) {
     exhaustedFilters.push('effective_on');
   }
@@ -348,6 +396,27 @@ export async function retrieveNovaEvidence(
 
   if (inDomain.length > 0 && ranked.length === 0) {
     exhaustedFilters.push('lexical_match');
+  }
+
+  // Surface not-current instruments that DID lexically match, so the Assistant
+  // Service can caveat them ("enacted, not commenced — not treated as current
+  // law") instead of silently omitting them. Only when scoping to current law.
+  const excludedNotInForce: NotInForceMatch[] = [];
+  if (!includeNotYetInForce) {
+    const seen = new Set<string>();
+    for (const chunk of meetsAuthority) {
+      if (isCurrentLaw(chunk)) continue;
+      if (!matchesDomain(chunk, requestedDomains)) continue;
+      if (scoreChunk(chunk, queryTerms) <= 0) continue;
+      const source = sourcesById.get(chunk.knowledge_source_id);
+      if (!source || seen.has(source.id)) continue;
+      seen.add(source.id);
+      excludedNotInForce.push({
+        manifestId: source.manifest_id,
+        title: source.title,
+        legalStatus: source.legal_status,
+      });
+    }
   }
 
   // ── Assembly (K5 §11) ────────────────────────────────────────────────────
@@ -410,6 +479,7 @@ export async function retrieveNovaEvidence(
       embeddingIdentity: null,
     },
     retrievedAt,
+    excludedNotInForce,
   };
 
   // Fails closed. A malformed set is rejected here rather than by whatever

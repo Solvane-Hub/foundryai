@@ -50,6 +50,22 @@ export const knowledgeFreshnessStateSchema = z.enum([
   'withdrawn',
 ]);
 
+/**
+ * K2 — verified legal standing. Mandatory on registration and deliberately not
+ * defaulted: a source whose standing has not been established must declare
+ * `unresolved` rather than be assumed in force. Retrieval treats only
+ * `in_force` / `base_text_amended` as current applicable law.
+ */
+export const knowledgeSourceLegalStatusSchema = z.enum([
+  'in_force',
+  'base_text_amended',
+  'enacted_not_in_force',
+  'repealed',
+  'spent',
+  'superseded',
+  'unresolved',
+]);
+
 /** K1 §3 — jurisdiction-scoped version identity, e.g. 'BS-v1.4'. */
 export const knowledgeVersionSchema = z
   .string()
@@ -100,6 +116,8 @@ export const registerSourceSchema = z
      * inherit `current` from anywhere.
      */
     freshnessState: knowledgeFreshnessStateSchema,
+    /** Required. See `knowledgeSourceLegalStatusSchema`. */
+    legalStatus: knowledgeSourceLegalStatusSchema,
     publicationDate: isoDate.nullable().optional(),
     effectiveDate: isoDate.nullable().optional(),
     expiryDate: isoDate.nullable().optional(),

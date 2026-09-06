@@ -15,3 +15,8 @@ next-env.d.ts
 supabase/.temp/
 supabase/.branches/
 .fuse_hidden*
+
+# Acquired source material (protected govt legislation, G11). Internal
+# engineering only — never committed or redistributed. See
+# scripts/knowledge/acquire-sources.ts.
+.corpus/

@@ -35,6 +35,7 @@ const publishedPack: KnowledgePack = {
   approval_note: null,
   superseded_at: null,
   superseded_by_id: null,
+  commercial_publication_eligibility: 'cleared',
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
 };
@@ -60,6 +61,7 @@ function source(
     last_reviewed_date: '2026-01-15',
     review_due_at: null,
     freshness_state: 'current',
+    legal_status: 'in_force',
     accessed_at: '2026-01-20T00:00:00.000Z',
     content_hash: 'source-hash',
     content_media_type: 'application/pdf',

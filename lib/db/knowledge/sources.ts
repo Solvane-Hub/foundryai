@@ -27,6 +27,12 @@ export interface InsertSourceValues {
    * write error rather than a silent claim of currency.
    */
   freshness_state: KnowledgeSource['freshness_state'];
+  /**
+   * MANDATORY. Verified legal standing. Never defaulted at the application layer:
+   * a source whose standing has not been established must say so ('unresolved')
+   * rather than be presented as current law.
+   */
+  legal_status: KnowledgeSource['legal_status'];
   publication_date: string | null;
   effective_date: string | null;
   expiry_date: string | null;

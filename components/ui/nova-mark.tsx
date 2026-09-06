@@ -47,8 +47,19 @@ export type NovaState =
   | 'searching'
   /** Deterministic filters and ranking are narrowing the result set. */
   | 'evaluating'
+  /**
+   * Related passages are being drawn together — the citation graph's
+   * same-document relationships, made visible. Not a claim about legal
+   * relationships (see `nova-field.tsx`): only that these came from one source.
+   */
+  | 'connecting'
   /** The extractive reasoner is selecting passages and building the envelope. */
   | 'composing'
+  /**
+   * Nova is speaking its result aloud. A presentation state, not a pipeline
+   * stage: the answer already exists, and the body is reacting to its own audio.
+   */
+  | 'speaking'
   /** An answer is available. */
   | 'ready'
   /** An answer is available, but coverage is incomplete. */
@@ -65,7 +76,9 @@ const STATE_LABEL: Record<NovaState, string> = {
   listening: 'Nova is waiting for your question',
   searching: 'Nova is searching the published sources',
   evaluating: 'Nova is narrowing the sources it found',
+  connecting: 'Nova is drawing together passages from the same sources',
   composing: 'Nova is assembling an answer from the sources',
+  speaking: 'Nova is speaking its answer',
   ready: 'Nova has an answer',
   limited: 'Nova has a partial answer',
   refused: 'Nova found nothing that answers this',

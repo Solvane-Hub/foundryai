@@ -5,6 +5,7 @@ import {
   amendmentsForProvision,
   assertManifestValid,
   findEntry,
+  toPersistedLegalStatus,
 } from '@/services/knowledge/manifests/types';
 import { BAHAMAS_MANIFEST } from '@/services/knowledge/manifests/bahamas';
 import { registerSourceSchema } from '@/lib/validation/knowledge';
@@ -35,8 +36,23 @@ describe('Bahamas manifest — shape', () => {
     expect(() => assertManifestValid(BAHAMAS_MANIFEST)).not.toThrow();
   });
 
-  it('holds exactly the six approved sources', () => {
-    expect(BAHAMAS_MANIFEST.entries).toHaveLength(6);
+  it('holds exactly the seven approved sources', () => {
+    // Six instruments plus the 2026-0019 amendment found in the freshness check.
+    expect(BAHAMAS_MANIFEST.entries).toHaveLength(7);
+  });
+
+  it('includes the 2026-0019 freshness amendment, wired into the VAT chain', () => {
+    const amd = findEntry(BAHAMAS_MANIFEST, 'BS-VAT-AMD-2026-NO19');
+    expect(amd).not.toBeNull();
+    expect(amd!.legalStatus).toBe('in_force');
+    expect(amd!.commencementDate).toBe('2026-07-01');
+    expect(amd!.amends).toBe('BS-VAT-ACT-CH370A-REPRINT-2024');
+    // It raises the VAT registration threshold via the Third Schedule.
+    expect(amd!.amendedProvisions).toContain('Third Schedule');
+    expect(amd!.amendedProvisions).toContain('section 56');
+    // The base Act records it among its amendments.
+    const base = findEntry(BAHAMAS_MANIFEST, 'BS-VAT-ACT-CH370A-REPRINT-2024');
+    expect(base!.amendedBy).toContain('BS-VAT-AMD-2026-NO19');
   });
 
   it('targets BS-v0.1', () => {
@@ -69,6 +85,7 @@ describe('Bahamas manifest — shape', () => {
         sourceAuthority: e.sourceAuthority,
         legalSourceCategory: e.legalSourceCategory,
         freshnessState: e.freshnessState,
+        legalStatus: toPersistedLegalStatus(e.legalStatus),
         publicationDate: e.gazettedOn,
       });
       expect(result.success).toBe(true);
@@ -179,9 +196,9 @@ describe('Bahamas manifest — verified legal chronology', () => {
 });
 
 describe('Bahamas manifest — amendment relationships', () => {
-  it('links all three amending Acts to Chapter 370A', () => {
+  it('links all four amending Acts to Chapter 370A', () => {
     const base = findEntry(BAHAMAS_MANIFEST, VAT_ACT);
-    expect(base?.amendedBy).toHaveLength(3);
+    expect(base?.amendedBy).toHaveLength(4);
     for (const id of base?.amendedBy ?? []) {
       expect(findEntry(BAHAMAS_MANIFEST, id)?.amends).toBe(VAT_ACT);
     }
@@ -197,9 +214,11 @@ describe('Bahamas manifest — amendment relationships', () => {
     expect(amendments.map((a) => a.actNumber).sort()).toEqual(['No. 3 of 2025', 'No. 4 of 2026']);
   });
 
-  it('records the Second Schedule food exemption from No. 4 of 2026', () => {
+  it('records the Second Schedule amendments (No. 4 of 2026 and No. 2 Act of 2026)', () => {
     const amendments = amendmentsForProvision(BAHAMAS_MANIFEST, VAT_ACT, 'Second Schedule');
-    expect(amendments.map((a) => a.actNumber)).toEqual(['No. 4 of 2026']);
+    const actNumbers = amendments.map((a) => a.actNumber);
+    expect(actNumbers).toContain('No. 4 of 2026');
+    expect(actNumbers).toContain('No. 2 Act of 2026');
   });
 
   it('returns nothing for an unamended provision', () => {

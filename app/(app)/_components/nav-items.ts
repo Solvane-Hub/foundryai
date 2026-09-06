@@ -1,12 +1,13 @@
 import {
   Banknote,
+  ClipboardList,
   FileText,
   LayoutDashboard,
-  ListChecks,
   type LucideIcon,
   Settings,
   ShieldCheck,
   Sparkles,
+  Waypoints,
 } from 'lucide-react';
 
 /**
@@ -54,13 +55,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
        * capability the corpus does not support.
        */
       { href: '/assistant', label: 'Nova', available: true, icon: Sparkles },
-      { href: '/intake', label: 'Business intake', available: true, icon: ListChecks },
+      { href: '/intake', label: 'Business intake', available: true, icon: ClipboardList },
     ],
   },
   {
     label: 'Coming soon',
     items: [
-      { href: '/timeline', label: 'Timeline', available: false, icon: ListChecks },
+      { href: '/timeline', label: 'Timeline', available: false, icon: Waypoints },
       { href: '/compliance', label: 'Compliance', available: false, icon: ShieldCheck },
       { href: '/funding', label: 'Funding', available: false, icon: Banknote },
       { href: '/documents', label: 'Documents', available: false, icon: FileText },

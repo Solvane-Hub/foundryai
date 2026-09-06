@@ -8,7 +8,9 @@ export default function SignUpPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+        <h1 className="text-on-ink text-[1.75rem] font-semibold tracking-[-0.02em] text-balance">
+          Create your account
+        </h1>
         <p className="text-foreground-muted text-sm">
           Start turning your business idea into a plan.
         </p>

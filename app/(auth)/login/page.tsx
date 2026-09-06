@@ -14,7 +14,9 @@ export default async function LoginPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <h1 className="text-on-ink text-[1.75rem] font-semibold tracking-[-0.02em] text-balance">
+          Sign in
+        </h1>
         <p className="text-foreground-muted text-sm">Welcome back.</p>
       </div>
 
